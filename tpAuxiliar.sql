@@ -96,7 +96,7 @@ CREATE TABLE MAND.ENVIO (
 
 -- MATERIALES 
 
-CREATE TABLE MAND.MATERIAL_DETALLE(
+/*CREATE TABLE MAND.MATERIAL_DETALLE(
     material_codigo	bigint IDENTITY(1,1) PRIMARY KEY,
     material_precio	decimal(38,2),
     material_descripcion nvarchar(255)
@@ -108,6 +108,20 @@ CREATE TABLE MAND.COMPRA_DETALLE (
 	compra_det_material	bigint, -- FK material detalle
 	compra_det_precio_unit decimal(18,2),
 	compra_det_cant	decimal(18,0)
+)*/
+
+CREATE TABLE MAND.MATERIAL_SILLON (
+      material_sillon_id bigint IDENTITY(1,1) PRIMARY KEY,
+      material_sillon_sillon bigint, -- FK SILLON
+      material_sillon_tipo bigint, --FK TIPO_MATERIAL
+      material_sillon_precio decimal(38,2)
+)
+
+CREATE TABLE MAND.TIPO_MATERIAL (
+    tipo_material_codigo bigint IDENTITY(1,1) PRIMARY KEY,
+    tipo_material_nombre nvarchar(255),
+    --tipo_material_descripcion nvarchar(255),
+    tipo_material_tipo nvarchar(255)
 )
 
 
@@ -115,14 +129,14 @@ CREATE TABLE MAND.MADERA (
     madera_id bigint IDENTITY(1,1) PRIMARY KEY,
     madera_dureza nvarchar(255),
     madera_color nvarchar(255),
-    material_id	bigint, -- FK MATERIAL_DETALLE
+    material_id	bigint, -- FK TIPO_MATERIAL
 )
 
 CREATE TABLE MAND.TELA (	
     tela_id bigint IDENTITY(1,1) PRIMARY KEY,
     tela_teaxtura nvarchar(255),
     tela_color nvarchar(255),
-    material	bigint, -- FK MATERIAL_DETALLE
+    material	bigint, -- FK TIPO_MATERIAL
 )
 
 CREATE TABLE MAND.RELLENO (	
@@ -135,12 +149,12 @@ CREATE TABLE MAND.RELLENO (
 
 -- SILLONES 
 
-CREATE TABLE MAND.SILLON_COMPOSICION (
+/*CREATE TABLE MAND.SILLON_COMPOSICION (
     sillon_comp_codigo bigint IDENTITY(1,1) PRIMARY KEY,
     sillon_comp_tela bigint, --FK TELA
     sillon_comp_madera	bigint, --FK MADERA
     sillon_comp_elleno	bigint --FK RELLENO
-)
+)*/
 
 CREATE TABLE MAND.SILLON(
     sillon_codigo	bigint PRIMARY KEY,
@@ -190,7 +204,7 @@ CREATE TABLE MAND.CANCELACION_PEDIDO(
 CREATE TABLE MAND.DETALLE_PEDIDO(
     detalle_id	decimal(18,0) PRIMARY KEY,
     sillon_id	bigint, --FK SILLON
-    pedido_det_subtotal	decimal(18,0),		
+    pedido_det_precio	decimal(18,0),		
     pedido_det_cantidad	bigInt,
     pedido_id decimal(18,0) --FK PEDIDO
 ) 
@@ -301,7 +315,7 @@ END
 GO
 
 
-GO
+/*GO
 	CREATE PROCEDURE MAND.migracion_material_detalle
 	AS
 	BEGIN
@@ -310,7 +324,7 @@ GO
 		from gd_esquema.Maestra
 		where Compra_Numero is not null
 	END
-GO
+GO*/
 
 GO
 	CREATE PROCEDURE MAND.migracion_compra_detalle
@@ -325,14 +339,41 @@ GO
 GO
 
 GO
+CREATE PROCEDURE MAND.migracion_tipo_material
+	AS
+	BEGIN
+		INSERT INTO	MAND.TIPO_MATERIAL(tipo_material_nombre,tipo_material_tipo)
+		SELECT M.Material_nombre,M.material_tipo FROM gd_esquema.Maestra M
+        GROUP BY M.Material_nombre,M.material_tipo
+        HAVING tipo_material_nombre IS NOT NULL AND 
+               tipo_material_tipo IS NOT NULL
+
+	END
+GO
+
+GO
+CREATE PROCEDURE MAND.migracion_material_sillon
+	AS
+	BEGIN
+		INSERT INTO	MAND.MATERIAL_SILLON(material_sillon_sillon,material_sillon_tipo, material_sillon_precio)
+	    SELECT S.sillon_codigo,TM.tipo_material_codigo,M.Material_Precio FROM gd_esquema.Maestra M
+                 join MAND.SILLON S ON S.sillon_codigo=M.Sillon_Codigo
+				 JOIN MAND.TIPO_MATERIAL TM ON TM.tipo_material_nombre=M.Material_Nombre AND 
+				                               TM.tipo_material_tipo=M.Material_Tipo
+		GROUP BY S.sillon_codigo,TM.tipo_material_codigo,M.Material_Precio
+	END
+
+GO
+
+GO
 	CREATE PROCEDURE MAND.migracion_madera
 	AS
 	BEGIN
 		INSERT INTO	MAND.MADERA
-		select Madera_Dureza,Madera_Color, material_codigo
-		from gd_esquema.Maestra AS M join MAND.MATERIAL_DETALLE on M.Material_Descripcion = MAND.MATERIAL_DETALLE.material_descripcion
-		where Material_Descripcion is not null and Material_Tipo = 'Madera'
-		group by Madera_Dureza,Madera_Color
+		select M.Madera_Dureza,M.Madera_Color, TM.tipo_material_codigo
+		from gd_esquema.Maestra AS M join MAND.TIPO_MATERIAL TM on M.Material_nombre = TM.tipo_material_nombre AND TM.tipo_material_tipo='Madera'
+		where M.Material_Descripcion is not null
+		group by M.Madera_Dureza,M.Madera_Color,TM.tipo_material_codigo
 	END
 GO
 
@@ -341,10 +382,10 @@ GO
 	AS
 	BEGIN
 		INSERT INTO	MAND.MADERA
-		select Tela_Textura,Tela_Color, material_codigo
-		from gd_esquema.Maestra AS M join MAND.MATERIAL_DETALLE on M.Material_Descripcion = MAND.MATERIAL_DETALLE.material_descripcion
-		where Compra_Numero is not null and Material_Tipo = 'Tela'
-		group by Tela_Textura,Tela_Color
+		select M.Tela_Textura,M.Tela_Color, M.material_codigo
+		from gd_esquema.Maestra AS M join MAND.TIPO_MATERIAL TM on M.Material_nombre = TM.tipo_material_nombre AND TM.tipo_material_tipo='Tela'
+		where M.Compra_Numero is not null 
+		group by M.Tela_Textura,M.Tela_Color,TM.tipo_material_codigo
 	END
 GO
 
@@ -353,13 +394,13 @@ GO
 	AS
 	BEGIN
 		INSERT INTO	MAND.MADERA
-		select Relleno_Densidad, material_codigo
-		from gd_esquema.Maestra AS M join MAND.MATERIAL_DETALLE on M.Material_Descripcion = MAND.MATERIAL_DETALLE.material_descripcion
-		where Compra_Numero is not null and Material_Tipo = 'Relleno'
-		group by Relleno_Densidad
+		select M.Relleno_Densidad, TM.tipo_material_codigo
+		from gd_esquema.Maestra AS M join MAND.TIPO_MATERIAL TM on M.Material_nombre = TM.tipo_material_nombre AND TM.tipo_material_tipo='Relleno'
+		where M.Compra_Numero is not null 
+		group by M.Relleno_Densidad,TM.tipo_material_codigo
 	END
 
-GO
+/*GO
 CREATE PROCEDURE MAND.migracion_sillon_composicion AS
 BEGIN 
 
@@ -374,7 +415,7 @@ FROM gd_esquema.Maestra M
 GROUP BY T.tela_id,
        Ma.madera_id,
 	   r.relleno_id
-
+*/
 
 END
 GO

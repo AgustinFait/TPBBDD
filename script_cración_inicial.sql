@@ -13,15 +13,15 @@ CREATE SCHEMA MAND
 
 GO
 
-select * from gd_esquema.Maestra
+
 
 -- SUCURSAL
 
 -------SP SUCURSAL--------------------------------------------------------------------------
 GO
-ALTER PROCEDURE MAND.crearTablas 
+/*ALTER PROCEDURE MAND.crearTablas 
 as
-BEGIN
+BEGIN*/
 CREATE TABLE MAND.PROVINCIA (
 	prov_codigo BIGINT IDENTITY(1,1) PRIMARY KEY,
 	prov_nombre NVARCHAR(255)
@@ -285,7 +285,7 @@ FOREIGN KEY (compra_det_compra) REFERENCES MAND.COMPRA(compra_numero)
 
 ALTER TABLE MAND.COMPRA_DETALLE
 ADD CONSTRAINT FK_compraDetalleDetalleMaterial
-FOREIGN KEY (compra_det_material) REFERENCES MAND.Detalle_Sillon( material_sillon_id)
+FOREIGN KEY (compra_det_material) REFERENCES MAND.TIPO_MATERIAL (tipo_material_codigo)
 
 ALTER TABLE MAND.PEDIDO 
 ADD CONSTRAINT FK_pedidoEstado
@@ -318,8 +318,8 @@ FOREIGN KEY (detalle_factura_pedido) REFERENCES MAND.PEDIDO (pedido_nro)
 ALTER TABLE MAND.DETALLE_FACTURA
 ADD CONSTRAINT FK_detalleFacturaFactura
 FOREIGN KEY (detalle_factura_factura) REFERENCES MAND.FACTURA (factura_nro)
-END
-GO
+/*END
+GO*/
 
 
 --Procedimientos
@@ -356,11 +356,6 @@ BEGIN
     DROP TABLE IF EXISTS MAND.PROVINCIA;
 END;
 GO
-
-exec mand.LIMPIAR_TABLAS
-exec MAND.crearTablas
-
-
 
 ---------------------------------------------------------- MIGRAR PROVINCIA ----------------------------------------------------------
 GO
@@ -660,8 +655,8 @@ BEGIN
 
 INSERT INTO MAND.MODELO 
    select DISTINCT m.Sillon_modelo_Codigo,
-          m.sillon_modelo,
-		  m.Sillon_Modelo_Descripcion,
+          REPLACE(m.sillon_modelo,':',''),
+		  REPLACE(m.Sillon_Modelo_Descripcion,':',''),
 		  m.Sillon_Modelo_Precio
    from gd_esquema.Maestra m
    WHERE m.Sillon_Modelo_Codigo IS NOT NULL AND
@@ -691,6 +686,7 @@ INSERT INTO MAND.MEDIDA
 END
 GO
 
+GO
 CREATE PROCEDURE MAND.migrar_estado 
 AS
 BEGIN
@@ -698,30 +694,36 @@ INSERT INTO MAND.ESTADO
   SELECT DISTINCT Pedido_Estado FROM gd_esquema.Maestra  
 
 END
+GO
 
-CREATE PROCEDURE dropearProcedimientos 
+GO
+CREATE PROCEDURE MAND.migrar_compra_detalle
 AS
 BEGIN
- SET NOCOUNT ON;
- DROP PROCEDURE MAND.migracion_cliente;
- DROP PROCEDURE MAND.migracion_compra;
- DROP TRIGGER MAND.migracion_envio;
- DROP PROCEDURE MAND.migracion_factura;
- DROP PROCEDURE MAND.migracion_madera;
- DROP PROCEDURE MAND.migracion_medidas;
- DROP PROCEDURE MAND.migracion_modelo;
- DROP PROCEDURE MAND.MIGRAR_SUCURSALES;
- DROP PROCEDURE MAND.MIGRAR_PROVINCIA;
- DROP PROCEDURE MAND.MIGRAR_LOCALIDAD;
- DROP PROCEDURE MAND.migrar_estado;
- DROP PROCEDURE MAND.MIGRAR_DIRECCION;
- DROP PROCEDURE MAND.migracion_tipo_material;
- DROP PROCEDURE MAND.migracion_proveedor;
- DROP PROCEDURE MAND.migracion_relleno;
- DROP PROCEDURE MAND.migracion_tela;
+INSERT INTO MAND.COMPRA_DETALLE
+  SELECT DISTINCT 
+      M.Compra_Numero,
+	  TM.tipo_material_codigo,
+	  M.Detalle_Compra_Precio,
+	  M.Detalle_Compra_Cantidad,
+	  M.Detalle_Compra_SubTotal
+  FROM gd_esquema.Maestra m
+    JOIN MAND.TIPO_MATERIAL TM ON 
+			   TM.tipo_material_nombre = M.Material_Nombre AND
+			 TM.tipo_material_descripcion = M.Material_Descripcion AND
+			 TM.tipo_material_tipo =M.Material_Tipo 
+  WHERE M.Compra_Numero IS NOT NULL AND
+	  M.Detalle_Compra_Precio IS NOT NULL AND
+	  M.Detalle_Compra_Cantidad IS NOT NULL AND
+	  M.Detalle_Compra_SubTotal IS NOT NULL 
 END
+GO
 
-alter PROCEDURE ejecutarMigracion 
+
+
+
+go
+CREATE PROCEDURE MAND.ejecutarMigracion 
 as 
 BEGIN
 
@@ -739,8 +741,34 @@ EXEC MAND.migracion_tela;
 EXEC MAND.migracion_relleno;
 EXEC MAND.migracion_modelo;
 EXEC MAND.migracion_medidas;
+EXEC MAND.migrar_compra_detalle;
 EXEC MAND.migrar_estado;
 END
 
-select * from MAND.ENVIO
-exec ejecutarMigracion
+go
+exec  MAND.ejecutarMigracion
+go
+
+/* 
+   DROP PROCEDURE MAND.migracion_cliente;
+ DROP PROCEDURE MAND.migracion_compra;
+ DROP TRIGGER MAND.migracion_envio;
+ DROP PROCEDURE MAND.migracion_factura;
+ DROP PROCEDURE MAND.migracion_madera;
+ DROP PROCEDURE MAND.migracion_medidas;
+ DROP PROCEDURE MAND.migracion_modelo;
+ DROP PROCEDURE MAND.MIGRAR_SUCURSALES;
+ DROP PROCEDURE MAND.MIGRAR_PROVINCIA;
+ DROP PROCEDURE MAND.MIGRAR_LOCALIDAD;
+ DROP PROCEDURE MAND.migrar_estado;
+ DROP PROCEDURE MAND.MIGRAR_DIRECCION;
+ DROP PROCEDURE MAND.migracion_tipo_material;
+ DROP PROCEDURE MAND.migracion_proveedor;
+ DROP PROCEDURE MAND.migracion_relleno;
+ DROP PROCEDURE MAND.migracion_tela;
+ DROP PROCEDURE MAND.migrar_compra_detalle;
+ DROP PROCEDURE MAND.ejecutarMigracion;
+ EXEC MAND.LIMPIAR_TABLAS;
+ DROP PROCEDURE MAND.LIMPIAR_TABLAS;
+   DROP SCHEMA MAND
+*/

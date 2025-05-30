@@ -1,6 +1,12 @@
 USE [GD1C2025]
 GO
-CREATE SCHEMA MAND
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'MAND')
+BEGIN 
+	EXEC ('CREATE SCHEMA MAND')
+END
+GO
 
 GO
 -- ======================================================= DROP ESTRUCTURAS EXISTENTES =================================================================
@@ -25,14 +31,14 @@ BEGIN
     DROP PROCEDURE IF EXISTS MAND.migracion_cliente;
     DROP PROCEDURE IF EXISTS MAND.migracion_factura;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_FACTURA_DETALLE;
-    DROP PROCEDURE IF EXISTS MAND.migracion_tipo_material;
+    DROP PROCEDURE IF EXISTS MAND.migracion_material;
     DROP PROCEDURE IF EXISTS MAND.migracion_madera;
     DROP PROCEDURE IF EXISTS MAND.migracion_tela;
     DROP PROCEDURE IF EXISTS MAND.migracion_relleno;
     DROP PROCEDURE IF EXISTS MAND.migracion_modelo;
     DROP PROCEDURE IF EXISTS MAND.migracion_medidas;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_DETALLE;
+    /*DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_DETALLE;*/
     DROP PROCEDURE IF EXISTS MAND.migrar_estado;
     DROP PROCEDURE IF EXISTS MAND.migrar_compra_detalle;
     DROP PROCEDURE IF EXISTS MAND.ejecutarMigracion;
@@ -54,14 +60,14 @@ BEGIN
 	DROP TABLE IF EXISTS MAND.PEDIDO;
 	DROP TABLE IF EXISTS MAND.ESTADO;
 	DROP TABLE IF EXISTS MAND.COMPRA_DETALLE;
-	DROP TABLE IF EXISTS MAND.Detalle_Sillon;
+	DROP TABLE IF EXISTS MAND.SILLON_COMPOSICION;
 	DROP TABLE IF EXISTS MAND.SILLON;
 	DROP TABLE IF EXISTS MAND.MEDIDA;
 	DROP TABLE IF EXISTS MAND.MODELO;
 	DROP TABLE IF EXISTS MAND.RELLENO;
 	DROP TABLE IF EXISTS MAND.TELA;
 	DROP TABLE IF EXISTS MAND.MADERA;
-	DROP TABLE IF EXISTS MAND.TIPO_MATERIAL;
+	DROP TABLE IF EXISTS MAND.MATERIAL;
 	DROP TABLE IF EXISTS MAND.ENVIO;
 	DROP TABLE IF EXISTS MAND.FACTURA;
 	DROP TABLE IF EXISTS MAND.CLIENTE;
@@ -152,7 +158,7 @@ CREATE TABLE MAND.ENVIO (
     envio_importe_subida	decimal(18,2)
 )
 
-CREATE TABLE MAND.TIPO_MATERIAL (
+CREATE TABLE MAND.MATERIAL (
     tipo_material_codigo bigint IDENTITY(1,1) PRIMARY KEY,
     tipo_material_nombre nvarchar(255),
     tipo_material_descripcion nvarchar(255),
@@ -199,12 +205,14 @@ CREATE TABLE MAND.SILLON(
     sillon_codigo	bigint PRIMARY KEY,
     sillon_modelo bigint, --FK MODELO
     sillon_medida	bigint, --FK MEDIDA
+	sillon_composicion bigint --FK SILLON
 )
 
-CREATE TABLE MAND.Detalle_Sillon (
-      material_sillon_id bigint IDENTITY(1,1) PRIMARY KEY,
-      material_sillon_sillon bigint, -- FK SILLON
-      material_sillon_tipo bigint, --FK TIPO_MATERIAL
+CREATE TABLE MAND.SILLON_COMPOSICION (
+      sillon_comp_codigo bigint IDENTITY(1,1) PRIMARY KEY,
+	  sillon_comp_madera bigint,
+	  sillon_comp_relleno bigint,
+	  sillon_comp_tela bigint
 )
 
 CREATE TABLE MAND.COMPRA_DETALLE (
@@ -301,15 +309,15 @@ FOREIGN KEY (envio_factura) REFERENCES MAND.FACTURA(factura_nro)
 
 ALTER TABLE MAND.TELA
 ADD CONSTRAINT FK_telaTipoMaterial
-FOREIGN KEY (material_id) REFERENCES MAND.TIPO_MATERIAL(tipo_material_codigo)
+FOREIGN KEY (material_id) REFERENCES MAND.MATERIAL(tipo_material_codigo)
 
 ALTER TABLE MAND.MADERA
 ADD CONSTRAINT FK_maderaTipoMaterial
-FOREIGN KEY (material_id) REFERENCES MAND.TIPO_MATERIAL(tipo_material_codigo)
+FOREIGN KEY (material_id) REFERENCES MAND.MATERIAL(tipo_material_codigo)
 
 ALTER TABLE MAND.RELLENO
 ADD CONSTRAINT FK_rellenoTipoMaterial
-FOREIGN KEY (material_id) REFERENCES MAND.TIPO_MATERIAL(tipo_material_codigo)
+FOREIGN KEY (material_id) REFERENCES MAND.MATERIAL(tipo_material_codigo)
 
 ALTER TABLE MAND.SILLON
 ADD CONSTRAINT FK_sillonModelo
@@ -319,13 +327,21 @@ ALTER TABLE MAND.SILLON
 ADD CONSTRAINT FK_sillonMedida
 FOREIGN KEY (sillon_medida) REFERENCES MAND.MEDIDA ( medidas_código)
 
-ALTER TABLE MAND.Detalle_Sillon
-ADD CONSTRAINT FK_detalleSillonSillon
-FOREIGN KEY ( material_sillon_sillon) REFERENCES MAND.SILLON ( sillon_codigo)
+ALTER TABLE MAND.SILLON
+ADD CONSTRAINT FK_sillonComposicion
+FOREIGN KEY (sillon_composicion) REFERENCES MAND.SILLON_COMPOSICION (sillon_comp_codigo)
 
-ALTER TABLE MAND.Detalle_Sillon
-ADD CONSTRAINT FK_detalleSillonTipoMaterial
-FOREIGN KEY ( material_sillon_tipo) REFERENCES MAND.TIPO_MATERIAL (tipo_material_codigo)
+ALTER TABLE MAND.SILLON_COMPOSICION
+ADD CONSTRAINT FK_detalleSillonTela
+FOREIGN KEY (sillon_comp_tela) REFERENCES MAND.TELA (tela_id)
+
+ALTER TABLE MAND.SILLON_COMPOSICION
+ADD CONSTRAINT FK_detalleSillonMadera
+FOREIGN KEY ( sillon_comp_madera) REFERENCES MAND.MADERA(madera_id)
+
+ALTER TABLE MAND.SILLON_COMPOSICION
+ADD CONSTRAINT FK_detalleSillonRelleno
+FOREIGN KEY ( sillon_comp_relleno) REFERENCES MAND.RELLENO(relleno_id)
 
 
 ALTER TABLE MAND.COMPRA_DETALLE
@@ -334,7 +350,7 @@ FOREIGN KEY (compra_det_compra) REFERENCES MAND.COMPRA(compra_numero)
 
 ALTER TABLE MAND.COMPRA_DETALLE
 ADD CONSTRAINT FK_compraDetalleDetalleMaterial
-FOREIGN KEY (compra_det_material) REFERENCES MAND.TIPO_MATERIAL (tipo_material_codigo)
+FOREIGN KEY (compra_det_material) REFERENCES MAND.MATERIAL (tipo_material_codigo)
 
 ALTER TABLE MAND.PEDIDO 
 ADD CONSTRAINT FK_pedidoEstado
@@ -573,6 +589,7 @@ BEGIN
 
     SELECT DISTINCT m.Factura_Numero, m.Pedido_Numero, m.Detalle_Factura_Precio, m.Detalle_Factura_Cantidad, m.Detalle_Factura_SubTotal
     FROM gd_esquema.Maestra as m
+	join MAND.DETALLE_PEDIDO
     WHERE m.Factura_Numero IS NOT NULL
 		AND m.Pedido_Numero IS NOT NULL
 		AND m.Detalle_Factura_Cantidad IS NOT NULL
@@ -605,10 +622,10 @@ GO
 
 
 go
-CREATE PROCEDURE MAND.migracion_tipo_material
+CREATE PROCEDURE MAND.migracion_material
 	AS
 	BEGIN
-		INSERT INTO	MAND.TIPO_MATERIAL
+		INSERT INTO	MAND.MATERIAL
 		select DISTINCT 
 		     M.Material_Nombre,
 			 M.Material_Descripcion,
@@ -636,7 +653,7 @@ CREATE PROCEDURE MAND.migracion_madera
 			   m.Madera_Color,
 			   TM.tipo_material_codigo
 		 FROM gd_esquema.Maestra M 
-		    JOIN MAND.TIPO_MATERIAL TM ON 
+		    JOIN MAND.MATERIAL TM ON 
 			   TM.tipo_material_nombre = M.Material_Nombre AND
 			 TM.tipo_material_descripcion = M.Material_Descripcion AND
 			 TM.tipo_material_tipo = 'Madera' AND
@@ -657,7 +674,7 @@ CREATE PROCEDURE MAND.migracion_tela
 			   m.tela_Color,
 			   TM.tipo_material_codigo
 		 FROM gd_esquema.Maestra M 
-		    JOIN MAND.TIPO_MATERIAL TM ON 
+		    JOIN MAND.MATERIAL TM ON 
 			   TM.tipo_material_nombre = M.Material_Nombre AND
 			 TM.tipo_material_descripcion = M.Material_Descripcion AND
 			 TM.tipo_material_tipo = 'Tela' AND
@@ -677,7 +694,7 @@ CREATE PROCEDURE MAND.migracion_relleno
 		       M.Relleno_Densidad,
 			   TM.tipo_material_codigo
 		 FROM gd_esquema.Maestra M 
-		    JOIN MAND.TIPO_MATERIAL TM ON 
+		    JOIN MAND.MATERIAL TM ON 
 			   TM.tipo_material_nombre = M.Material_Nombre AND
 			 TM.tipo_material_descripcion = M.Material_Descripcion AND
 			 TM.tipo_material_tipo = 'Relleno' AND
@@ -749,8 +766,6 @@ BEGIN
 END
 GO
 
-select * from mand.SILLON
-
 -- ======================================================= SP SILLON DETALLE =================================================================
 GO
 CREATE PROCEDURE MAND.MIGRACION_SILLON_DETALLE
@@ -792,7 +807,7 @@ INSERT INTO MAND.COMPRA_DETALLE
 	  M.Detalle_Compra_Cantidad,
 	  M.Detalle_Compra_SubTotal
   FROM gd_esquema.Maestra m
-    JOIN MAND.TIPO_MATERIAL TM ON 
+    JOIN MAND.MATERIAL TM ON 
 			   TM.tipo_material_nombre = M.Material_Nombre AND
 			 TM.tipo_material_descripcion = M.Material_Descripcion AND
 			 TM.tipo_material_tipo =M.Material_Tipo 
@@ -819,7 +834,7 @@ EXEC MAND.migracion_compra;
 EXEC MAND.migracion_cliente;
 EXEC MAND.migracion_factura;
 EXEC MAND.MIGRACION_FACTURA_DETALLE;
-EXEC MAND.migracion_tipo_material;
+EXEC MAND.migracion_material;
 EXEC MAND.migracion_madera;
 EXEC MAND.migracion_tela;
 EXEC MAND.migracion_relleno;
@@ -837,4 +852,4 @@ go
 
 -- ======================================================= PRUEBAS =================================================================
 
-SELECT * FROM MAND.DETALLE_FACTURA
+/*SELECT * FROM MAND.DETALLE_FACTURA

@@ -377,7 +377,7 @@ FOREIGN KEY ( sillon_id) REFERENCES MAND.SILLON (sillon_codigo)
 
 ALTER TABLE MAND.DETALLE_FACTURA
 ADD CONSTRAINT FK_detalleFacturaPedido
-FOREIGN KEY (detalle_factura_pedido) REFERENCES MAND.PEDIDO (pedido_nro)
+FOREIGN KEY (detalle_factura_pedido) REFERENCES MAND.DETALLE_PEDIDO (detalle_pedido_id)
 
 ALTER TABLE MAND.DETALLE_FACTURA
 ADD CONSTRAINT FK_detalleFacturaFactura
@@ -591,7 +591,12 @@ BEGIN
 
     SELECT DISTINCT m.Factura_Numero, m.Pedido_Numero, m.Detalle_Factura_Precio, m.Detalle_Factura_Cantidad, m.Detalle_Factura_SubTotal
     FROM gd_esquema.Maestra as m
-	join MAND.DETALLE_PEDIDO
+	JOIN MAND.DETALLE_PEDIDO d
+	ON d.sillon_id = m.Sillon_Codigo
+		AND d.pedido_det_cantidad = m.Detalle_Pedido_Cantidad
+		AND d.pedido_det_precio = m.Detalle_Pedido_Precio
+		AND d.pedido_det_subtotal = m.Detalle_Pedido_SubTotal
+		AND d.pedido_id = m.Pedido_Numero
     WHERE m.Factura_Numero IS NOT NULL
 		AND m.Pedido_Numero IS NOT NULL
 		AND m.Detalle_Factura_Cantidad IS NOT NULL
@@ -856,4 +861,3 @@ go
 /*SELECT * FROM MAND.DETALLE_FACTURA*/
 
 select distinct Madera_Color,Madera_Dureza from gd_esquema.Maestra
-

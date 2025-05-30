@@ -1,27 +1,89 @@
+USE [GD1C2025]
+GO
 CREATE SCHEMA MAND
 
--- CREAR TABLAS
--- CONSTRAINS
---========================================
+GO
+-- ======================================================= DROP ESTRUCTURAS EXISTENTES =================================================================
 
--- STORE PROCEDURE
+-- ======================================================= DROP PROCEDURES =================================================================
 
--- GENERAL
--- >> SP DROP AND CREATE TABLAS
-
--- SP: SUCURSALES
-
+DROP PROCEDURE IF EXISTS MAND.BORRAR_PROCEDURES_MIGRACION;
 GO
 
+CREATE PROCEDURE MAND.BORRAR_PROCEDURES_MIGRACION
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    DROP PROCEDURE IF EXISTS MAND.LIMPIAR_TABLAS;
+    DROP PROCEDURE IF EXISTS MAND.MIGRAR_PROVINCIA;
+    DROP PROCEDURE IF EXISTS MAND.MIGRAR_LOCALIDAD;
+    DROP PROCEDURE IF EXISTS MAND.MIGRAR_DIRECCION;
+    DROP PROCEDURE IF EXISTS MAND.MIGRAR_SUCURSALES;
+    DROP PROCEDURE IF EXISTS MAND.migracion_proveedor;
+    DROP PROCEDURE IF EXISTS MAND.migracion_compra;
+    DROP PROCEDURE IF EXISTS MAND.migracion_cliente;
+    DROP PROCEDURE IF EXISTS MAND.migracion_factura;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_FACTURA_DETALLE;
+    DROP PROCEDURE IF EXISTS MAND.migracion_tipo_material;
+    DROP PROCEDURE IF EXISTS MAND.migracion_madera;
+    DROP PROCEDURE IF EXISTS MAND.migracion_tela;
+    DROP PROCEDURE IF EXISTS MAND.migracion_relleno;
+    DROP PROCEDURE IF EXISTS MAND.migracion_modelo;
+    DROP PROCEDURE IF EXISTS MAND.migracion_medidas;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_DETALLE;
+    DROP PROCEDURE IF EXISTS MAND.migrar_estado;
+    DROP PROCEDURE IF EXISTS MAND.migrar_compra_detalle;
+    DROP PROCEDURE IF EXISTS MAND.ejecutarMigracion;
 
--- SUCURSAL
-
--------SP SUCURSAL--------------------------------------------------------------------------
+END;
 GO
-/*ALTER PROCEDURE MAND.crearTablas 
-as
-BEGIN*/
+
+-- ======================================================= DROP TABLES =================================================================
+
+GO
+CREATE PROCEDURE MAND.LIMPIAR_TABLAS
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+	DROP TABLE IF EXISTS MAND.DETALLE_FACTURA;
+	DROP TABLE IF EXISTS MAND.DETALLE_PEDIDO;
+	DROP TABLE IF EXISTS MAND.CANCELACION_PEDIDO;
+	DROP TABLE IF EXISTS MAND.PEDIDO;
+	DROP TABLE IF EXISTS MAND.ESTADO;
+	DROP TABLE IF EXISTS MAND.COMPRA_DETALLE;
+	DROP TABLE IF EXISTS MAND.Detalle_Sillon;
+	DROP TABLE IF EXISTS MAND.SILLON;
+	DROP TABLE IF EXISTS MAND.MEDIDA;
+	DROP TABLE IF EXISTS MAND.MODELO;
+	DROP TABLE IF EXISTS MAND.RELLENO;
+	DROP TABLE IF EXISTS MAND.TELA;
+	DROP TABLE IF EXISTS MAND.MADERA;
+	DROP TABLE IF EXISTS MAND.TIPO_MATERIAL;
+	DROP TABLE IF EXISTS MAND.ENVIO;
+	DROP TABLE IF EXISTS MAND.FACTURA;
+	DROP TABLE IF EXISTS MAND.CLIENTE;
+	DROP TABLE IF EXISTS MAND.COMPRA;
+	DROP TABLE IF EXISTS MAND.PROVEEDOR;
+    DROP TABLE IF EXISTS MAND.SUCURSAL;
+    DROP TABLE IF EXISTS MAND.DIRECCION;
+    DROP TABLE IF EXISTS MAND.LOCALIDAD;
+    DROP TABLE IF EXISTS MAND.PROVINCIA;
+
+
+END;
+GO
+
+-- ======================================================= DROP ESTRUCTURAS EXISTENTES - EXECS =================================================================
+
+EXEC MAND.LIMPIAR_TABLAS;
+EXEC MAND.BORRAR_PROCEDURES_MIGRACION;
+
+-- ======================================================= TABLAS =================================================================
+GO
+
 CREATE TABLE MAND.PROVINCIA (
 	prov_codigo BIGINT IDENTITY(1,1) PRIMARY KEY,
 	prov_nombre NVARCHAR(255)
@@ -46,10 +108,6 @@ CREATE TABLE MAND.SUCURSAL (
 	sucursal_telefono NVARCHAR(255)
 )
 
-----------------------------------------------------------------------
-
--- COMPRAS
-
 CREATE TABLE MAND.PROVEEDOR (
 	prov_codigo BIGINT IDENTITY(1,1) PRIMARY KEY,
 	prov_razon_social NVARCHAR(255),
@@ -66,9 +124,6 @@ CREATE TABLE MAND.COMPRA (
 	compra_fecha datetime2(6),
 	compra_total decimal(18,2),
 )
-
-
--- FACTURAS
 
 CREATE TABLE MAND.CLIENTE(
     cliente_dni	nvarchar(255) PRIMARY KEY,	
@@ -97,9 +152,6 @@ CREATE TABLE MAND.ENVIO (
     envio_importe_subida	decimal(18,2)
 )
 
--- MATERIALES 
-
-
 CREATE TABLE MAND.TIPO_MATERIAL (
     tipo_material_codigo bigint IDENTITY(1,1) PRIMARY KEY,
     tipo_material_nombre nvarchar(255),
@@ -127,8 +179,6 @@ CREATE TABLE MAND.RELLENO (
     relleno_densidad decimal(38,2),
    material_id	bigint --FK TIPO_MATERIAL
 )
-
--- SILLONES 
 
 CREATE TABLE MAND.MODELO (	
     modelo_codigo bigint PRIMARY KEY,
@@ -166,8 +216,6 @@ CREATE TABLE MAND.COMPRA_DETALLE (
     compra_det_subtotal decimal(18,2)
 )
 
--- PEDIDO
-
 CREATE TABLE MAND.ESTADO(
     estado_codigo	bigint IDENTITY(1,1)	PRIMARY KEY,
     estado_tipo	nvarchar(255) check (estado_tipo='ENTREGADO' OR estado_tipo='CANCELADO' OR estado_tipo='PENDIENTE')
@@ -201,7 +249,7 @@ CREATE TABLE MAND.DETALLE_PEDIDO(
 ) 
 
 CREATE TABLE MAND.DETALLE_FACTURA(
-    detalle_factura_id	decimal(18,0) PRIMARY KEY,
+    detalle_factura_id	bigint IDENTITY(1,1) PRIMARY KEY,
     detalle_factura_factura	bigint, --FK factura	
     detalle_factura_pedido	decimal(18,0), --FK pedido
     detalle_factura_precio	decimal(18,2),
@@ -209,7 +257,8 @@ CREATE TABLE MAND.DETALLE_FACTURA(
     detalle_factura_subtotal decimal(18,2)
 ) 
 
---CLAVES FORANEAS
+-- ======================================================= FOREIGN KEYS =================================================================
+
 ALTER TABLE MAND.LOCALIDAD
 ADD CONSTRAINT FK_localidadProvincia
 FOREIGN KEY (loc_provincia) REFERENCES MAND.PROVINCIA(prov_codigo)
@@ -318,46 +367,10 @@ FOREIGN KEY (detalle_factura_pedido) REFERENCES MAND.PEDIDO (pedido_nro)
 ALTER TABLE MAND.DETALLE_FACTURA
 ADD CONSTRAINT FK_detalleFacturaFactura
 FOREIGN KEY (detalle_factura_factura) REFERENCES MAND.FACTURA (factura_nro)
-/*END
-GO*/
 
+-- ======================================================= STORE PROCEDURES =================================================================
 
---Procedimientos
----------------------------------------------------------- LIMPIAR TABLAS ----------------------------------------------------------
-
-GO
-CREATE PROCEDURE MAND.LIMPIAR_TABLAS
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-	DROP TABLE IF EXISTS MAND.DETALLE_FACTURA;
-	DROP TABLE IF EXISTS MAND.DETALLE_PEDIDO;
-	DROP TABLE IF EXISTS MAND.CANCELACION_PEDIDO;
-	DROP TABLE IF EXISTS MAND.PEDIDO;
-	DROP TABLE IF EXISTS MAND.ESTADO;
-	DROP TABLE IF EXISTS MAND.COMPRA_DETALLE;
-	DROP TABLE IF EXISTS MAND.Detalle_Sillon;
-	DROP TABLE IF EXISTS MAND.SILLON;
-	DROP TABLE IF EXISTS MAND.MEDIDA;
-	DROP TABLE IF EXISTS MAND.MODELO;
-	DROP TABLE IF EXISTS MAND.RELLENO;
-	DROP TABLE IF EXISTS MAND.TELA;
-	DROP TABLE IF EXISTS MAND.MADERA;
-	DROP TABLE IF EXISTS MAND.TIPO_MATERIAL;
-	DROP TABLE IF EXISTS MAND.ENVIO;
-	DROP TABLE IF EXISTS MAND.FACTURA;
-	DROP TABLE IF EXISTS MAND.CLIENTE;
-	DROP TABLE IF EXISTS MAND.COMPRA;
-	DROP TABLE IF EXISTS MAND.PROVEEDOR;
-    DROP TABLE IF EXISTS MAND.SUCURSAL;
-    DROP TABLE IF EXISTS MAND.DIRECCION;
-    DROP TABLE IF EXISTS MAND.LOCALIDAD;
-    DROP TABLE IF EXISTS MAND.PROVINCIA;
-END;
-GO
-
----------------------------------------------------------- MIGRAR PROVINCIA ----------------------------------------------------------
+-- ======================================================= SP PROVINCIAS =================================================================
 GO
 CREATE PROCEDURE MAND.MIGRAR_PROVINCIA
 AS
@@ -369,7 +382,7 @@ BEGIN
 END;
 GO
 
----------------------------------------------------------- MIGRAR LOCALIDAD ----------------------------------------------------------
+-- ======================================================= SP LOCALIDAD =================================================================
 GO
 CREATE PROCEDURE MAND.MIGRAR_LOCALIDAD
 AS
@@ -408,7 +421,7 @@ BEGIN
 END;
 GO
 
----------------------------------------------------------- MIGRAR DIRECCION ----------------------------------------------------------
+-- ======================================================= SP DIRECCION =================================================================
 CREATE PROCEDURE MAND.MIGRAR_DIRECCION
 AS
 BEGIN
@@ -446,7 +459,7 @@ END
 
 GO
 
----------------------------------------------------------- MIGRAR SUCURSALES ----------------------------------------------------------
+-- ======================================================= SP SUCURSALES =================================================================
 GO
 create PROCEDURE MAND.MIGRAR_SUCURSALES
 AS
@@ -464,10 +477,9 @@ BEGIN
 	JOIN MAND.LOCALIDAD as L ON L.loc_codigo=D.dir_localidad AND L.loc_nombre=REPLACE(Sucursal_Localidad, ';', 'Go')
 	JOIN MAND.PROVINCIA as p ON L.loc_provincia=p.prov_codigo AND p.prov_nombre=REPLACE(Sucursal_Provincia, ';', 'Go')
 	WHERE Sucursal_NroSucursal IS NOT NULL
-
 END
 
-GO
+-- ======================================================= SP PROVEEDOR =================================================================
 
 GO
 	create PROCEDURE MAND.migracion_proveedor
@@ -483,6 +495,8 @@ GO
 		where Proveedor_Cuit is not null
     END
 GO
+
+-- ======================================================= SP COMPRA =================================================================
 
 GO
 CREATE PROCEDURE MAND.migracion_compra
@@ -503,6 +517,8 @@ AS
         where Compra_Numero is not null
     END
 GO
+
+-- ======================================================= SP CLIENTE =================================================================
 
 GO
 CREATE PROCEDURE MAND.migracion_cliente as
@@ -526,6 +542,7 @@ UPDATE MAND.CLIENTE SET Cliente_Mail=replace(Cliente_Mail,' ','')
 END
 GO
 
+-- ======================================================= SP FACTURA =================================================================
 
 GO
 CREATE PROCEDURE MAND.migracion_factura AS
@@ -546,7 +563,20 @@ BEGIN
 
 END
 GO
+-- ======================================================= SP FACTURA DETALLE =================================================================
 
+
+CREATE PROCEDURE MAND.MIGRACION_FACTURA_DETALLE
+AS
+BEGIN
+    INSERT INTO MAND.DETALLE_FACTURA
+
+    SELECT DISTINCT m.Factura_Numero, m.Pedido_Numero, m.Detalle_Factura_Precio, m.Detalle_Factura_Cantidad, m.Detalle_Factura_SubTotal
+    FROM gd_esquema.Maestra as m
+    WHERE m.Factura_Numero IS NOT NULL
+		AND m.Pedido_Numero IS NOT NULL
+		AND m.Detalle_Factura_Cantidad IS NOT NULL
+END
 
 GO
 CREATE TRIGGER MAND.migracion_envio on MAND.FACTURA  for insert 
@@ -571,6 +601,7 @@ FROM gd_esquema.Maestra M
 
 GO
 
+-- ======================================================= SP TIPO MATERIAL =================================================================
 
 
 go
@@ -592,6 +623,9 @@ CREATE PROCEDURE MAND.migracion_tipo_material
 	END
 go
 
+-- ======================================================= SP MADERA =================================================================
+
+
 GO
 CREATE PROCEDURE MAND.migracion_madera
 	AS
@@ -610,6 +644,8 @@ CREATE PROCEDURE MAND.migracion_madera
 		
 	END
 GO
+
+-- ======================================================= SP TELA =================================================================
 
 GO
 CREATE PROCEDURE MAND.migracion_tela
@@ -630,6 +666,8 @@ CREATE PROCEDURE MAND.migracion_tela
 	END
 GO
 
+-- ======================================================= SP RELLENO =================================================================
+
 GO
 CREATE PROCEDURE MAND.migracion_relleno
 	AS
@@ -648,6 +686,8 @@ CREATE PROCEDURE MAND.migracion_relleno
 	END
 GO
 
+-- ======================================================= SP MODELO SILLON =================================================================
+
 GO
 CREATE PROCEDURE MAND.migracion_modelo
 AS
@@ -665,6 +705,8 @@ INSERT INTO MAND.MODELO
     
 END
 GO
+
+-- ======================================================= SP MEDIDAS SILLON =================================================================
 
 GO
 CREATE PROCEDURE MAND.migracion_medidas
@@ -686,6 +728,46 @@ INSERT INTO MAND.MEDIDA
 END
 GO
 
+-- ======================================================= SP SILLON =================================================================
+
+CREATE PROCEDURE MAND.MIGRACION_SILLON
+AS
+BEGIN
+
+	INSERT INTO MAND.SILLON (sillon_codigo, sillon_medida, sillon_modelo)
+
+    SELECT DISTINCT g.Sillon_Codigo, med.medidas_código, g.Sillon_Modelo_Codigo
+    FROM gd_esquema.Maestra g
+    JOIN MAND.MEDIDA med
+	ON med.medidas_altura = g.Sillon_Medida_Alto
+		AND med.medidas_anchura = g.Sillon_Medida_Ancho
+		AND med.medidas_profundidad = g.Sillon_Medida_Profundidad
+		AND med.medidas_precio = g.Sillon_Medida_Precio
+	WHERE g.Sillon_Medida_Alto IS NOT NULL
+		AND g.Sillon_Modelo_Codigo IS NOT NULL
+
+END
+GO
+
+select * from mand.SILLON
+
+-- ======================================================= SP SILLON DETALLE =================================================================
+GO
+CREATE PROCEDURE MAND.MIGRACION_SILLON_DETALLE
+AS
+BEGIN
+
+	SELECT DISTINCT G.Sillon_Codigo, t.tipo_material_codigo
+	FROM gd_esquema.Maestra g
+	JOIN MAND.TIPO_MATERIAL t
+	ON g.Material_Nombre = t.tipo_material_nombre
+		AND g.Material_Descripcion = t.tipo_material_descripcion
+		AND g.Material_Tipo = t.tipo_material_tipo
+	WHERE g.Sillon_Codigo IS NOT NULL
+END
+
+-- ======================================================= SP ESTADO PEDIDO =================================================================
+
 GO
 CREATE PROCEDURE MAND.migrar_estado 
 AS
@@ -695,6 +777,8 @@ INSERT INTO MAND.ESTADO
 
 END
 GO
+
+-- ======================================================= SP COMPRA DETALLE =================================================================
 
 GO
 CREATE PROCEDURE MAND.migrar_compra_detalle
@@ -719,8 +803,7 @@ INSERT INTO MAND.COMPRA_DETALLE
 END
 GO
 
-
-
+-- ======================================================= SP MIGRACION =================================================================
 
 go
 CREATE PROCEDURE MAND.ejecutarMigracion 
@@ -735,12 +818,15 @@ EXEC MAND.migracion_proveedor;
 EXEC MAND.migracion_compra;
 EXEC MAND.migracion_cliente;
 EXEC MAND.migracion_factura;
+EXEC MAND.MIGRACION_FACTURA_DETALLE;
 EXEC MAND.migracion_tipo_material;
 EXEC MAND.migracion_madera;
 EXEC MAND.migracion_tela;
 EXEC MAND.migracion_relleno;
 EXEC MAND.migracion_modelo;
 EXEC MAND.migracion_medidas;
+EXEC MAND.MIGRACION_SILLON;
+EXEC MAND.MIGRACION_SILLON_DETALLE;
 EXEC MAND.migrar_compra_detalle;
 EXEC MAND.migrar_estado;
 END
@@ -749,26 +835,6 @@ go
 exec  MAND.ejecutarMigracion
 go
 
-/* 
-   DROP PROCEDURE MAND.migracion_cliente;
- DROP PROCEDURE MAND.migracion_compra;
- DROP TRIGGER MAND.migracion_envio;
- DROP PROCEDURE MAND.migracion_factura;
- DROP PROCEDURE MAND.migracion_madera;
- DROP PROCEDURE MAND.migracion_medidas;
- DROP PROCEDURE MAND.migracion_modelo;
- DROP PROCEDURE MAND.MIGRAR_SUCURSALES;
- DROP PROCEDURE MAND.MIGRAR_PROVINCIA;
- DROP PROCEDURE MAND.MIGRAR_LOCALIDAD;
- DROP PROCEDURE MAND.migrar_estado;
- DROP PROCEDURE MAND.MIGRAR_DIRECCION;
- DROP PROCEDURE MAND.migracion_tipo_material;
- DROP PROCEDURE MAND.migracion_proveedor;
- DROP PROCEDURE MAND.migracion_relleno;
- DROP PROCEDURE MAND.migracion_tela;
- DROP PROCEDURE MAND.migrar_compra_detalle;
- DROP PROCEDURE MAND.ejecutarMigracion;
- EXEC MAND.LIMPIAR_TABLAS;
- DROP PROCEDURE MAND.LIMPIAR_TABLAS;
-   DROP SCHEMA MAND
-*/
+-- ======================================================= PRUEBAS =================================================================
+
+SELECT * FROM MAND.DETALLE_FACTURA

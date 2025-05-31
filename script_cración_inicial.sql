@@ -35,11 +35,12 @@ BEGIN
     DROP PROCEDURE IF EXISTS MAND.migracion_material;
     DROP PROCEDURE IF EXISTS MAND.migracion_madera;
     DROP PROCEDURE IF EXISTS MAND.migracion_tela;
-	 DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON;
+	DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON;
     DROP PROCEDURE IF EXISTS MAND.migracion_relleno;
     DROP PROCEDURE IF EXISTS MAND.migracion_modelo;
     DROP PROCEDURE IF EXISTS MAND.migracion_medidas;
-    /*DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_DETALLE;*/
+	DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_COMPOSICION;
+	DROP PROCEDURE IF EXISTS MAND.MIGRACION_SILLON_DETALLE;
     DROP PROCEDURE IF EXISTS MAND.migrar_estado;
     DROP PROCEDURE IF EXISTS MAND.migrar_compra_detalle;
     DROP PROCEDURE IF EXISTS MAND.ejecutarMigracion;
@@ -60,7 +61,7 @@ BEGIN
 	DROP TABLE IF EXISTS MAND.PEDIDO;
 	DROP TABLE IF EXISTS MAND.ESTADO;
 	DROP TABLE IF EXISTS MAND.COMPRA_DETALLE;
-		DROP TABLE IF EXISTS MAND.SILLON;
+	DROP TABLE IF EXISTS MAND.SILLON;
 	DROP TABLE IF EXISTS MAND.SILLON_COMPOSICION;
 	DROP TABLE IF EXISTS MAND.MEDIDA;
 	DROP TABLE IF EXISTS MAND.MODELO;
@@ -78,8 +79,6 @@ BEGIN
     DROP TABLE IF EXISTS MAND.DIRECCION;
     DROP TABLE IF EXISTS MAND.LOCALIDAD;
     DROP TABLE IF EXISTS MAND.PROVINCIA;
-
-
 END;
 GO
 
@@ -787,6 +786,41 @@ INSERT INTO MAND.MEDIDA
     
 END
 GO
+-- ======================================================= SP SILLON COMPOSICION =================================================================
+
+CREATE PROCEDURE MAND.MIGRACION_SILLON_COMPOSICION
+AS
+BEGIN
+	
+	INSERT INTO MAND.SILLON_COMPOSICION
+
+	SELECT DISTINCT 
+		m.madera_id,
+		r.relleno_id,
+		t.tela_id
+	FROM gd_esquema.Maestra gt
+	JOIN gd_esquema.Maestra gm
+		ON gt.sillon_codigo = gm.sillon_codigo
+		AND gt.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+		AND gt.Tela_Color IS NOT NULL
+		AND gm.Tela_Color IS NULL
+		AND gm.Madera_Color IS NOT NULL
+		AND gt.Sillon_Codigo IS NOT NULL
+		AND gt.Sillon_Modelo_Codigo IS NOT NULL
+	JOIN gd_esquema.Maestra gr
+		ON gr.Relleno_Densidad IS NOT NULL
+		AND gr.sillon_codigo = gm.sillon_codigo
+		AND gr.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+	JOIN MAND.TELA t
+		ON t.tela_color = gt.Tela_Color
+		AND t.tela_teaxtura = gt.Tela_Textura
+	JOIN MAND.MADERA m
+		ON m.madera_color = gm.Madera_Color
+		AND m.madera_dureza = gm.Madera_Dureza
+	JOIN MAND.RELLENO r
+		ON r.relleno_densidad = gr.Relleno_Densidad
+END
+GO
 
 -- ======================================================= SP SILLON =================================================================
 
@@ -794,17 +828,49 @@ CREATE PROCEDURE MAND.MIGRACION_SILLON
 AS
 BEGIN
 
-	INSERT INTO MAND.SILLON (sillon_codigo, sillon_medida, sillon_modelo)
+	INSERT INTO MAND.SILLON 
 
-    SELECT DISTINCT g.Sillon_Codigo, med.medidas_código, g.Sillon_Modelo_Codigo
-    FROM gd_esquema.Maestra g
-    JOIN MAND.MEDIDA med
-	ON med.medidas_altura = g.Sillon_Medida_Alto
-		AND med.medidas_anchura = g.Sillon_Medida_Ancho
-		AND med.medidas_profundidad = g.Sillon_Medida_Profundidad
-		AND med.medidas_precio = g.Sillon_Medida_Precio
-	WHERE g.Sillon_Medida_Alto IS NOT NULL
-		AND g.Sillon_Modelo_Codigo IS NOT NULL
+    SELECT DISTINCT 
+		gt.Sillon_Codigo, 
+		gt.Sillon_Modelo_Codigo,
+		med.medidas_código, 
+		sp.sillon_comp_codigo,
+	FROM gd_esquema.Maestra gt
+    JOIN gd_esquema.Maestra gm
+		ON gt.sillon_codigo = gm.sillon_codigo
+		AND gt.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+		AND gt.Tela_Color IS NOT NULL
+		AND gm.Tela_Color IS NULL
+		AND gm.Madera_Color IS NOT NULL
+		AND gt.Sillon_Codigo IS NOT NULL
+		AND gt.Sillon_Modelo_Codigo IS NOT NULL
+	JOIN gd_esquema.Maestra gr
+		ON gr.Relleno_Densidad IS NOT NULL
+		AND gr.sillon_codigo = gm.sillon_codigo
+		AND gr.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+	JOIN MAND.TELA t
+		ON t.tela_color = gt.Tela_Color
+		AND t.tela_teaxtura = gt.Tela_Textura
+	JOIN MAND.MADERA m
+		ON m.madera_color = gm.Madera_Color
+		AND m.madera_dureza = gm.Madera_Dureza
+	JOIN MAND.RELLENO r
+		ON r.relleno_densidad = gr.Relleno_Densidad
+	JOIN MAND.SILLON_COMPOSICION sp
+		ON sp.sillon_comp_madera = m.madera_id
+		AND sp.sillon_comp_relleno = r.relleno_id
+		AND sp.sillon_comp_tela = t.tela_id
+	JOIN MAND.MEDIDA med
+		ON gt.Sillon_Medida_Ancho = med.medidas_anchura
+	   	AND gt.Sillon_Medida_Profundidad = med.medidas_profundidad
+		AND gt.Sillon_Medida_Precio = med.medidas_precio
+		AND gt.Sillon_Medida_Alto = med.medidas_altura
+	WHERE 
+		gt.Sillon_Medida_Alto IS NOT NULL
+		AND gt.Sillon_Modelo_Codigo IS NOT NULL
+		AND gt.Tela_Color IS NOT NULL
+		AND gm.Madera_Color IS NOT NULL
+		AND gr.Relleno_Densidad IS NOT NULL
 
 END
 GO
@@ -876,7 +942,7 @@ go
 CREATE PROCEDURE MAND.ejecutarMigracion 
 as 
 BEGIN
-
+PRINT '';
 EXEC MAND.MIGRAR_PROVINCIA;
 EXEC MAND.MIGRAR_LOCALIDAD;
 EXEC MAND.MIGRAR_DIRECCION;
@@ -893,6 +959,9 @@ EXEC MAND.migracion_tela;
 EXEC MAND.migracion_relleno;
 EXEC MAND.migracion_modelo;
 EXEC MAND.migracion_medidas;
+PRINT 'SILLON COMPOSICION';
+EXEC MAND.MIGRACION_SILLON_COMPOSICION;
+PRINT 'SILLON';
 EXEC MAND.MIGRACION_SILLON;
 EXEC MAND.migrar_compra_detalle;
 EXEC MAND.migrar_estado;
@@ -904,12 +973,78 @@ go
 
 -- ======================================================= PRUEBAS =================================================================
 
-/*SELECT * FROM MAND.DETALLE_FACTURA*/
+	SELECT DISTINCT 
+		m.madera_id,
+		r.relleno_id,
+		t.tela_id
+	FROM gd_esquema.Maestra gt
+	JOIN gd_esquema.Maestra gm
+		ON gt.sillon_codigo = gm.sillon_codigo
+		AND gt.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+		AND gt.Tela_Color IS NOT NULL
+		AND gm.Tela_Color IS NULL
+		AND gm.Madera_Color IS NOT NULL
+		AND gt.Sillon_Codigo IS NOT NULL
+		AND gt.Sillon_Modelo_Codigo IS NOT NULL
+	JOIN gd_esquema.Maestra gr
+		ON gr.Relleno_Densidad IS NOT NULL
+		AND gr.sillon_codigo = gm.sillon_codigo
+		AND gr.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+	JOIN MAND.TELA t
+		ON t.tela_color = gt.Tela_Color
+		AND t.tela_teaxtura = gt.Tela_Textura
+	JOIN MAND.MADERA m
+		ON m.madera_color = gm.Madera_Color
+		AND m.madera_dureza = gm.Madera_Dureza
+	JOIN MAND.RELLENO r
+		ON r.relleno_densidad = gr.Relleno_Densidad
 
-<<<<<<< HEAD
-select DISTINCT
-Sucursal_NroSucursal, Sucursal_Localidad,Sucursal_Provincia,Sucursal_Direccion, Sucursal_mail,Sucursal_Direccion from gd_esquema.Maestra
 
-=======
-select distinct Madera_Color,Madera_Dureza from gd_esquema.Maestra
->>>>>>> 8a3167b703cced3aac321878f35b85a062f86e4b
+
+	SELECT DISTINCT 
+		gt.Tela_Color,
+		gt.Tela_Textura,
+		t.tela_id,
+		t.tela_color,
+		t.tela_teaxtura,
+		gm.Madera_Dureza,
+		gm.Madera_Color,
+		m.madera_id,
+		m.madera_color,
+		m.madera_dureza,
+		gr.Relleno_Densidad,
+		r.relleno_id,
+		r.relleno_densidad
+	FROM gd_esquema.Maestra gt
+	JOIN gd_esquema.Maestra gm
+		ON gt.sillon_codigo = gm.sillon_codigo
+		AND gt.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+		AND gt.Tela_Color IS NOT NULL
+		AND gm.Tela_Color IS NULL
+		AND gm.Madera_Color IS NOT NULL
+		AND gt.Sillon_Codigo IS NOT NULL
+		AND gt.Sillon_Modelo_Codigo IS NOT NULL
+	JOIN gd_esquema.Maestra gr
+		ON gr.Relleno_Densidad IS NOT NULL
+		AND gr.sillon_codigo = gm.sillon_codigo
+		AND gr.Sillon_Modelo_Codigo = gm.Sillon_Modelo_Codigo
+	JOIN MAND.TELA t
+		ON t.tela_color = gt.Tela_Color
+		AND t.tela_teaxtura = gt.Tela_Textura
+	JOIN MAND.MADERA m
+		ON m.madera_color = gm.Madera_Color
+		AND m.madera_dureza = gm.Madera_Dureza
+	JOIN MAND.RELLENO r
+		ON r.relleno_densidad = gr.Relleno_Densidad
+
+	SELECT DISTINCT g.Sillon_Codigo, tm.tipo_material_codigo
+	FROM gd_esquema.Maestra g
+	JOIN MAND.TIPO_MATERIAL tm
+	ON tm.tipo_material_descripcion = g.Material_Descripcion
+	WHERE g.Material_Descripcion IS NOT NULL
+		AND g.Sillon_Codigo IS NOT NULL
+	ORDER BY 1
+
+	SELECT * FROM MAND.MADERA m
+	JOIN MAND.TIPO_MATERIAL t
+	ON m.madera_tipo_material_id = t.tipo_material_codigo

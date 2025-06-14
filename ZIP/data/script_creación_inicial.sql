@@ -253,7 +253,7 @@ CREATE TABLE MAND.CANCELACION_PEDIDO(
 CREATE TABLE MAND.DETALLE_PEDIDO(
     detalle_pedido_id bigint IDENTITY(1,1) PRIMARY KEY,
     sillon_id	bigint, --FK SILLON
-    pedido_det_precio	decimal(18,0),		
+    pedido_det_precio	decimal(18,2),		
     pedido_det_cantidad	bigInt,
     pedido_id decimal(18,0), --FK PEDIDO
     pedido_det_subtotal decimal(18,2)
@@ -589,11 +589,10 @@ AS
 BEGIN
     INSERT INTO MAND.DETALLE_FACTURA
 
-    SELECT DISTINCT m.Factura_Numero, m.Pedido_Numero, m.Detalle_Factura_Precio, m.Detalle_Factura_Cantidad, m.Detalle_Factura_SubTotal
+    SELECT DISTINCT m.Factura_Numero, d.detalle_pedido_id, m.Detalle_Factura_Precio, m.Detalle_Factura_Cantidad, m.Detalle_Factura_SubTotal
     FROM gd_esquema.Maestra as m
 	JOIN MAND.DETALLE_PEDIDO d
-	ON d.sillon_id = m.Sillon_Codigo
-		AND d.pedido_det_cantidad = m.Detalle_Pedido_Cantidad
+	ON  d.pedido_det_cantidad = m.Detalle_Pedido_Cantidad
 		AND d.pedido_det_precio = m.Detalle_Pedido_Precio
 		AND d.pedido_det_subtotal = m.Detalle_Pedido_SubTotal
 		AND d.pedido_id = m.Pedido_Numero
@@ -669,8 +668,8 @@ CREATE PROCEDURE MAND.MIGRACION_MADERA_CARACTERISTICA
 		
 		SELECT DISTINCT
 			m.material_id,
-			g.Madera_Color,
-			g.Madera_Dureza
+			g.Madera_Dureza,
+			g.Madera_Color
 		FROM gd_esquema.Maestra g
 		JOIN MAND.MATERIAL m
 			ON m.material_descripcion = g.Material_Descripcion
@@ -688,13 +687,12 @@ CREATE PROCEDURE MAND.MIGRACION_TELA_CARACTERISTICA
 		INSERT INTO	MAND.TELA_CARACTERISTICA
 		 SELECT DISTINCT
 		 	m.material_id,
-		 	g.Madera_Color,
-			g.Madera_Dureza
+			g.Tela_Textura,
+		 	g.tela_color
 		FROM gd_esquema.Maestra g
 		JOIN MAND.MATERIAL m
 			ON m.material_descripcion = g.Material_Descripcion
-
-		
+		where g.Tela_Textura is not null and g.tela_color is not null		
 	END
 GO
 
@@ -934,9 +932,6 @@ BEGIN
 	PRINT 'FACTURA';
 	EXEC MAND.migracion_factura;
 	PRINT '=================================';
-	PRINT 'FACTURA_DETALLE';
-	EXEC MAND.MIGRACION_FACTURA_DETALLE;
-	PRINT '=================================';
 	PRINT 'TIPO MATERIAL';
 	EXEC MAND.migracion_tipo_material;
 	PRINT '=================================';
@@ -979,6 +974,9 @@ BEGIN
 	PRINT 'CANCELACION PEDIDO';
 	EXEC MAND.migracion_cancelacion_pedido;
 	PRINT '=================================';
+	PRINT 'FACTURA_DETALLE';
+	EXEC MAND.MIGRACION_FACTURA_DETALLE;
+	PRINT '=================================';
 	PRINT 'FIN DE LA MIGRACION';
 	PRINT '=================================';
 END
@@ -988,3 +986,4 @@ exec  MAND.ejecutarMigracion
 go
 
 -- ======================================================= PRUEBAS =================================================================
+

@@ -669,8 +669,8 @@ CREATE PROCEDURE MAND.MIGRACION_MADERA_CARACTERISTICA
 		
 		SELECT DISTINCT
 			m.material_id,
-			g.Madera_Color,
-			g.Madera_Dureza
+			g.Madera_Dureza,
+			g.Madera_Color
 		FROM gd_esquema.Maestra g
 		JOIN MAND.MATERIAL m
 			ON m.material_descripcion = g.Material_Descripcion
@@ -688,8 +688,8 @@ CREATE PROCEDURE MAND.MIGRACION_TELA_CARACTERISTICA
 		INSERT INTO	MAND.TELA_CARACTERISTICA
 		 SELECT DISTINCT
 		 	m.material_id,
-		 	g.Madera_Color,
-			g.Madera_Dureza
+			g.Tela_Textura,
+		 	g.Tela_Color
 		FROM gd_esquema.Maestra g
 		JOIN MAND.MATERIAL m
 			ON m.material_descripcion = g.Material_Descripcion

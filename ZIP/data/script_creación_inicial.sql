@@ -182,7 +182,7 @@ CREATE TABLE MAND.MADERA_CARACTERISTICA (
 CREATE TABLE MAND.TELA_CARACTERISTICA (	
     tela_id bigint IDENTITY(1,1) PRIMARY KEY,
 	tela_material_id bigint, --FK MATERIAL
-    tela_teaxtura nvarchar(255),
+    tela_textura nvarchar(255),
     tela_color nvarchar(255)
 )
 

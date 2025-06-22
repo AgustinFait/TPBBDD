@@ -182,7 +182,7 @@ CREATE TABLE MAND.HECHOS_INGRESOS_EGRESOS
     egreso decimal(38,2) NOT NULL,
     cant_facturas bigint NOT NULL,
     cantidad_sillones bigint NOT NULL,
-    promedio_fabricacion datetime NOT NULL,
+    promedio_fabricacion int NOT NULL,
     PRIMARY KEY (
         dimension_tiempo,
         dimension_sucursal,
@@ -503,9 +503,6 @@ BEGIN
 		MAND.rango_etario_id(c.cliente_fechaNacimieto) AS [RANGO ETARIO], -- RANGO ETARIO
 		s.sillon_modelo AS [MODELO], -- MODELO
 		du.ubicacion_codigo AS [UBICACION], -- UBICACION
-
-
-
         ISNULL(SUM(df.detalle_factura_subtotal),0) AS [INGRESOS], -- DATA INGRESOS
 		 (select isnull(sum(compra_total),0)
         from MAND.COMPRA
@@ -656,7 +653,7 @@ INSERT INTO MAND.HECHOS_ENVIOS
 SELECT 
     dt.tiempo_codigo,
     u.ubicacion_codigo,
-    COUNT(CASE WHEN e.envio_fecha_programada = e.envio_fecha_entrega THEN 1 end) AS [CANT_ENVIOS_COMPLETOS],
+    SUM(CASE WHEN e.envio_fecha_programada = e.envio_fecha_entrega THEN 1 ELSE 0 end) AS [CANT_ENVIOS_COMPLETOS],
     COUNT(DISTINCT e.envio_numero) AS [CANT ENVIOS],
     AVG(e.envio_importe_subida+e.envio_importe_traslado) AS [PROMEDIO COSTO ENVIO]
    FROM MAND.ENVIO e 
@@ -682,7 +679,6 @@ SELECT
             dt.tiempo_año,
             l.loc_nombre,
             u.ubicacion_codigo
-    ORDER BY 1
  END
 GO
 
@@ -730,10 +726,7 @@ GROUP BY
     dt.tiempo_mes,
     dt.tiempo_año,
     ds.sucursal_id
-ORDER BY
-    ds.sucursal_id,
-    dt.tiempo_mes,
-    dt.tiempo_año
+
 
 --======================================================= VIEW2 FACTURA PROMEDIO MENSUAL =======================================================================
 
@@ -755,11 +748,7 @@ GROUP BY
     dt.tiempo_cuatrimestre,
     dt.tiempo_año,
     du.ubicacion_provincia
-ORDER BY 
-    dt.tiempo_mes,
-    dt.tiempo_cuatrimestre,
-    dt.tiempo_año,
-    du.ubicacion_provincia
+
 
 --======================================================= VIEW3 RENDIMIENTO DE MODELOS =======================================================================
 
@@ -772,23 +761,23 @@ select top 3 m.modelo_nombre
 from MAND.HECHOS_INGRESOS_EGRESOS as h
 join MAND.DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
 join MAND.DIMENSION_MODELO as m on m.modelo_codigo = h.dimension_modelo
-group by t.tiempo_año, t.tiempo_cuatrimestre, h.dimension_ubicacion,h.dimension_rango_etario
+group by t.tiempo_año, t.tiempo_cuatrimestre, h.dimension_ubicacion,h.dimension_rango_etario,m.modelo_nombre,h.cantidad_sillones
 order by h.cantidad_sillones desc
 
 
---======================================================= VIEW4 RENDIMIENTO DE MODELOS =======================================================================
+--======================================================= VIEW4 VOLUMEN_DE_PEDIDOS =======================================================================
 go
 
 CREATE view MAND.VOLUMEN_DE_PEDIDOS
 as
-select sum(h.cant_pedidos) as cantidad, t.tiempo_año as anio, t.tiempo_mes as mes, turno_detalle as tur.turno, suc.sucursal_id as sucursal
+select sum(h.cant_pedidos) as cantidad, t.tiempo_año as anio, t.tiempo_mes as mes, turno_detalle as turno, suc.sucursal_id as sucursal
 from MAND.HECHOS_PEDIDOS as h
 join MAND.DIMENSION_TIEMPO  as t on h.dimension_tiempo = t.tiempo_codigo
 join MAND.DIMENSION_TURNO_PEDIDO as tur on h.dimension_turno_pedido = tur.turno_codigo
 join MAND.DIMENSION_SUCURSAL as suc on h.dimension_sucursal = suc.sucursal_id
 group by t.tiempo_año,t.tiempo_mes,suc.sucursal_id,tur.turno_detalle
 
---======================================================= VIEW5 RENDIMIENTO DE MODELOS =======================================================================
+--======================================================= VIEW5 CONVERSION_DE_PEDIDOS =======================================================================
 go
 
 create view MAND.CONVERSION_DE_PEDIDOS
@@ -819,7 +808,7 @@ GROUP BY
     dt.tiempo_año, 
     dt.tiempo_cuatrimestre, 
     ds.sucursal_id
-ORDER BY dt.tiempo_año, dt.tiempo_cuatrimestre, ds.sucursal_id
+
 
 --======================================================= VIEW7 PROMEDIO COMPRAS =======================================================================
 
@@ -836,11 +825,8 @@ JOIN MAND.DIMENSION_TIEMPO dt
 GROUP BY 
     dt.tiempo_año, 
     dt.tiempo_mes
-ORDER BY 
-    dt.tiempo_año, 
-    dt.tiempo_mes
 
---======================================================= VIEW8 PROMEDIO COMPRAS =======================================================================
+--======================================================= VIEW8 COMPRAS_POR_TIPO_MATERIAL =======================================================================
 GO
 CREATE VIEW MAND.COMPRAS_POR_TIPO_MATERIAL
 AS
@@ -885,10 +871,20 @@ group by du.ubicacion_locaclidad
 order by sum(he.promedio_envio) desc
 
 
+/*
+--======================================================= PRUEBAS VIEW =======================================================================
+select * from MAND.LOCALIDADES_QUE_PAGAN_MAYOR_COSTO_DE_ENVIO
+SELECT * FROM MAND.PORCENTAJE_CUMPLIMIENTO_ENVIOS
+SELECT * FROM MAND.COMPRAS_POR_TIPO_MATERIAL
+SELECT * FROM MAND.PROMEDIO_COMPRAS
+SELECT * FROM MAND.TIEMPO_PROMEDIO_FABRICACION
+SELECT * FROM MAND.CONVERSION_DE_PEDIDOS
+SELECT * FROM MAND.VOLUMEN_DE_PEDIDOS
+SELECT * FROM MAND.RENDIMIENTO_DE_MODELOS
+SELECT * FROM MAND.FACTURA_PROMEDIO_MENSUAL
+SELECT * FROM MAND.GANANCIAS
+*/
 
 
--- CREATE IF EXISTS Y DROPS TABLES, PROCEDURES Y FUNCTIOS
--- SP PARA EJECUTAR TODA LA MIGRACION
--- PROBAR LAS VIEWS
--- ACTUALIZAR LOS DER
--- ARMAR EL DOC DE ESTRATEGIA: EXPLICAR POR QUE HICIMOS CADA TABLA DE HECHOS Y A QUE VIEWS RESPONDEN, AGREGAMOS UNA DIM PARA SUCURSAL.
+
+

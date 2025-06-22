@@ -85,28 +85,26 @@ go
 
 CREATE TABLE MAND.HECHOS_INGRESOS_EGRESOS
 (
-    dimension_tiempo bigint,
-    dimension_sucursal bigint,
-    dimension_rango_etario bigint,
-    dimension_modelo bigint,
-    dimension_tipo_material bigint,
-    dimension_ubicacion bigint,
-    ingreso decimal(38,2),
-    egreso decimal(38,2),
-    cant_facturas bigint,
-    cantidad_sillones bigint,
-    promedio_fabricacion datetime,
+    dimension_tiempo bigint NOT NULL,
+    dimension_sucursal bigint NOT NULL,
+    dimension_rango_etario bigint NOT NULL,
+    dimension_modelo bigint NOT NULL,
+    dimension_ubicacion bigint NOT NULL,
+    ingreso decimal(38,2) NOT NULL,
+    egreso decimal(38,2) NOT NULL,
+    cant_facturas bigint NOT NULL,
+    cantidad_sillones bigint NOT NULL,
+    promedio_fabricacion datetime NOT NULL,
     PRIMARY KEY (
         dimension_tiempo,
         dimension_sucursal,
         dimension_rango_etario,
         dimension_modelo,
-        dimension_tipo_material,
         dimension_ubicacion
     )
 )
 
-CREATE TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+CREATE TABLE MAND.HECHOS_PEDIDOS
 (
     dimension_tiempo bigint,
     dimension_sucursal bigint,
@@ -114,10 +112,6 @@ CREATE TABLE MAND.HECHOS_PEDIDOS_ENVIOS
     dimension_turno_pedido bigint,
     dimension_estado_pedido bigint,
     cant_pedidos decimal(12,2),
-    promedio_fabricacion decimal(12,2),
-    envios_cumplidos int,
-    envios_totales int,
-    promedio_envio decimal(12,2),
     PRIMARY KEY (
         dimension_tiempo,
         dimension_sucursal,
@@ -127,15 +121,59 @@ CREATE TABLE MAND.HECHOS_PEDIDOS_ENVIOS
     )
 )
 
+CREATE TABLE MAND.HECHOS_COMPRAS_MATERIAL(
+    dimension_tiempo bigint NOT NULL,
+    dimension_sucursal bigint NOT NULL,
+    dimension_tipo_material bigint NOT NULL,
+    importe_total decimal(38,2) NOT NULL,
+    cant_compras bigint NOT NULL
+    PRIMARY KEY(
+        dimension_tiempo,
+        dimension_sucursal,
+        dimension_tipo_material
+    )
+)
+
+create table MAND.Hechos_ENVIOS(
+    dimension_tiempo bigint,
+    dimension_ubicacion bigint,
+    envios_cumplidos int,	
+    envios_totales	int,		
+    promedio_envio	decimal(12,2)
+    PRIMARY KEY(
+        dimension_tiempo,
+        dimension_ubicacion
+    )
+)
+
+--======================================================= FK COMPRAS MATERIAL ========================================================================
+ALTER TABLE MAND.HECHOS_COMPRAS_MATERIAL
+ADD CONSTRAINT FK_ComprasMaterialTiempo
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.DIMENSION_TIEMPO(tiempo_codigo)
+
+ALTER TABLE MAND.HECHOS_COMPRAS_MATERIAL
+ADD CONSTRAINT FK_ComprasMateriallUbicacion
+FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.DIMENSION_UBICACION(ubicacion_codigo)
+
+ALTER TABLE MAND.HECHOS_COMPRAS_MATERIAL
+ADD CONSTRAINT FK_ComprasMaterialTipoMaterial
+FOREIGN KEY (dimension_tipo_material) REFERENCES MAND.DIMENSION_TIPO_MATERIAL(tipo_material)
+
+--======================================================= FK ENVIOS  ==================================================================-
+
+ALTER TABLE MAND.Hechos_ENVIOS
+ADD CONSTRAINT FK_enviosTiempo
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.DIMENSION_TIEMPO(tiempo_codigo)
+
+ALTER TABLE MAND.Hechos_ENVIOS
+ADD CONSTRAINT FK_enviosUbicacion
+FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.DIMENSION_UBICACION(ubicacion_codigo)
+
 --======================================================= FK INGRESO_EGRESO ========================================================================
 
 ALTER TABLE MAND.HECHOS_INGRESOS_EGRESOS
 ADD CONSTRAINT FK_ingresoModelo
 FOREIGN KEY (dimension_modelo) REFERENCES MAND.DIMENSION_MODELO(modelo_codigo)
-
-ALTER TABLE MAND.HECHOS_INGRESOS_EGRESOS
-ADD CONSTRAINT FK_ingresoTipoMaterial
-FOREIGN KEY (dimension_rango_etario) REFERENCES MAND.DIMENSION_TIPO_MATERIAL(tipo_material)
 
 ALTER TABLE MAND.HECHOS_INGRESOS_EGRESOS
 ADD CONSTRAINT FK_ingresoRango
@@ -153,25 +191,25 @@ ALTER TABLE MAND.HECHOS_INGRESOS_EGRESOS
 ADD CONSTRAINT FK_ingresoEgresoSucursal
 FOREIGN KEY (dimension_sucursal) REFERENCES MAND.DIMENSION_SUCURSAL(sucursal_id)
 
---======================================================= FK PEDIDOS_ENVIOS  ========================================================================
+--======================================================= FK PEDIDOS  ========================================================================
 
-ALTER TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosTiempo
 FOREIGN KEY (dimension_tiempo) REFERENCES MAND.DIMENSION_TIEMPO(tiempo_codigo)
 
-ALTER TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosUbicacion
 FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.DIMENSION_UBICACION(ubicacion_codigo)
 
-ALTER TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosTurno
 FOREIGN KEY (dimension_sucursal) REFERENCES MAND.DIMENSION_TURNO_PEDIDO(turno_codigo)
 
-ALTER TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosSucursal
 FOREIGN KEY (dimension_sucursal) REFERENCES MAND.DIMENSION_SUCURSAL(sucursal_id)
 
-ALTER TABLE MAND.HECHOS_PEDIDOS_ENVIOS
+ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosPedidoEstado
 FOREIGN KEY (dimension_estado_pedido) REFERENCES MAND.DIMENSION_ESTADO_PEDIDO(estado_pedido_codigo)
 
@@ -360,6 +398,7 @@ CREATE PROCEDURE MAND.MIGRACION_HECHOS_ING_EGR
 AS
 BEGIN
     INSERT INTO MAND.HECHOS_INGRESOS_EGRESOS
+
     SELECT
         dt.tiempo_codigo AS [TIEMPO ID], -- TIEMPO
         f.factura_sucursal AS [SUCURSAL], -- SUCURSAL
@@ -413,32 +452,322 @@ END
 
 --======================================================= SP PEDIDOS ENVIOS =======================================================================
 GO
-create procedure MAND.MIGRAR_PEDIDOS_ENVIOS
+
+create function MAND.turno(@horario datetime2)
+returns bigint
+
+as
+BEGIN
+    if( DATEPART(hh,@horario) > 14)
+    begin
+        return 2
+    end 
+    return 1
+end 
+
+--DROP FUNCTION MAND.turno
+GO
+create procedure MAND.MIGRAR_PEDIDOS
 AS
 BEGIN
-    -- TIEMPO, SUCURSAL, RANGO ETARIO, MODELO, TIPO MATERIAL, UBICACION
-    -- INGRESO Y CANTIDAD FACTURACION: FACTURA E ITEM FACTURA 
-    -- EGRESO: COMPRA E ITEM COMPRA
-    -- CANTIDAD SILLONES Y PROMEDIO FABRICACIÓN
-
-
-
-    END
+    -- TIEMPO, SUCURSAL, UBICACION, estado_pedido, turno_pedido
+    -- cant_pedidos
+    insert into MAND.HECHOS_PEDIDOS
+    select 
+    dt.tiempo_codigo as [DIMENSION_TIEMPO],
+    ped.pedido_sucursal as [DIMENSION_SUCURSAL],
+    du.ubicacion_codigo as [DIMENSION_UBICACION],
+    MAND.turno(ped.pedido_fecha_hora) as [DIMENSION_TURNO],
+    ped.pedido_estado as [DIMENSION_ESTADO_PEDIDO],
+    count(DISTINCT ped.pedido_nro) as [CANT_PEDIDOS]
+    from MAND.PEDIDO as ped
+        join MAND.DETALLE_PEDIDO as det_ped
+        on det_ped.pedido_id = ped.pedido_nro      
+        join MAND.ESTADO as est
+        on ped.pedido_estado = est.estado_codigo
+        JOIN MAND.SUCURSAL as suc
+        ON suc.sucursal_codigo = ped.pedido_sucursal
+        JOIN MAND.DIRECCION as d
+        ON suc.sucursal_direccion = d.dir_codigo
+        JOIN MAND.LOCALIDAD as l
+        ON d.dir_localidad = l.loc_codigo
+        JOIN MAND.PROVINCIA as p
+        ON l.loc_provincia = p.prov_codigo
+        JOIN MAND.DIMENSION_UBICACION as du
+        ON p.prov_nombre = du.ubicacion_provincia
+            AND l.loc_nombre = du.ubicacion_locaclidad
+        JOIN MAND.DIMENSION_TIEMPO dt
+        ON YEAR(ped.pedido_fecha_hora) = dt.tiempo_año
+            AND MONTH(ped.pedido_fecha_hora) = dt.tiempo_mes
+            AND MAND.getCuatrimestre(ped.pedido_fecha_hora) = dt.tiempo_cuatrimestre
+    GROUP by dt.tiempo_codigo, 
+    ped.pedido_sucursal, 
+    du.ubicacion_codigo, 
+    MAND.turno(ped.pedido_fecha_hora), 
+    ped.pedido_estado
+    
+END
 Go
 
+--======================================================= SP COMPRAS TIPO MATERIAL =======================================================================
 
 
-SELECT *
-FROM MAND.FACTURA
+GO
+CREATE PROCEDURE MAND.MIGRACION_HECHOS_COMPRA_MATERIAL
+AS
+BEGIN
+    INSERT INTO MAND.HECHOS_COMPRAS_MATERIAL
+    
+    SELECT 
+        c.compra_sucursal, 
+        dt.tiempo_codigo,
+        tm.tipo_material_codigo,
+        SUM(cd.compra_det_subtotal) AS [COMPRA TOTAL],
+        COUNT(DISTINCT c.compra_numero) AS [CANT COMPRAS]
+    FROM MAND.COMPRA c  
+        JOIN MAND.COMPRA_DETALLE cd
+            ON c.compra_numero = cd.compra_det_compra
+        JOIN MAND.DIMENSION_TIEMPO dt
+            ON YEAR(c.compra_fecha) = dt.tiempo_año
+            AND MONTH(c.compra_fecha) = dt.tiempo_mes
+            AND MAND.getCuatrimestre(c.compra_fecha) = dt.tiempo_cuatrimestre
+    JOIN MAND.MATERIAL m
+        ON cd.compra_det_material = m.material_id
+    JOIN MAND.TIPO_MATERIAL tm
+        ON m.material_tipo = tm.tipo_material_codigo
+    GROUP BY 
+        c.compra_sucursal,
+        dt.tiempo_codigo,
+        dt.tiempo_año,
+        dt.tiempo_mes,
+        tm.tipo_material_codigo
+END
 
-SELECT *
-FROM MAND.COMPRA
 
-SELECT datediff(day,p.pedido_fecha_hora,f.factura_fecha_hora)
-FROM MAND.FACTURA f
-    JOIN MAND.DETALLE_FACTURA df
-    ON f.factura_nro = df.detalle_factura_factura
-    JOIN MAND.DETALLE_PEDIDO dp
-    ON df.detalle_factura_detalle_pedido = dp.detalle_pedido_id
-    JOIN MAND.PEDIDO p
-    ON dp.pedido_id = p.pedido_nro
+
+--======================================================= SP ENVIOS=======================================================================
+
+GO
+create procedure MAND.MIGRACION_HECHOS_ENVIOS
+AS 
+ BEGIN
+
+INSERT INTO MAND.HECHOS_ENVIOS
+SELECT 
+    dt.tiempo_codigo,
+    u.ubicacion_codigo,
+    COUNT(CASE WHEN e.envio_fecha_programada = e.envio_fecha_entrega THEN 1 end) AS [CANT_ENVIOS_COMPLETOS],
+    COUNT(DISTINCT e.envio_numero) AS [CANT ENVIOS],
+    AVG(e.envio_importe_subida+e.envio_importe_traslado) AS [PROMEDIO COSTO ENVIO]
+   FROM MAND.ENVIO e 
+    join MAND.factura f
+     on f.factura_nro=e.envio_factura
+    join MAND.cliente c
+     on c.cliente_dni=f.factura_cliente
+    join MAND.DIRECCION d 
+     on d.dir_codigo=c.cliente_direccion
+    join MAND.localidad l 
+     on l.loc_codigo=d.dir_localidad
+    join MAND.PROVINCIA p
+     ON l.loc_provincia=p.prov_codigo
+    join MAND.DIMENSION_UBICACION u
+     on l.loc_nombre=u.ubicacion_locaclidad and p.prov_nombre=u.ubicacion_provincia
+    JOIN MAND.DIMENSION_TIEMPO dt
+        ON YEAR(e.envio_fecha_entrega) = dt.tiempo_año
+            AND MONTH(e.envio_fecha_entrega) = dt.tiempo_mes
+            AND MAND.getCuatrimestre(e.envio_fecha_entrega) = dt.tiempo_cuatrimestre
+    group by 
+            dt.tiempo_codigo,
+            dt.tiempo_mes,
+            dt.tiempo_año,
+            l.loc_nombre,
+            u.ubicacion_codigo
+    ORDER BY 1
+ END
+GO
+
+
+--======================================================= VIEWS =======================================================================
+
+--======================================================= VIEW1 GANANCIAS =======================================================================
+
+GO
+CREATE VIEW MAND.GANANCIAS
+AS
+SELECT 
+    ds.sucursal_id AS [SUCURSAL],
+    dt.tiempo_mes AS [MES],
+    dt.tiempo_año AS [AÑO],
+    SUM(hie.ingreso) AS [INGRESO],
+    MAX(hie.egreso) AS [EGRESO]
+FROM MAND.HECHOS_INGRESOS_EGRESOS hie
+    JOIN MAND.DIMENSION_TIEMPO dt
+        ON hie.dimension_tiempo = dt.tiempo_codigo
+    JOIN MAND.DIMENSION_SUCURSAL ds
+        ON hie.dimension_sucursal = ds.sucursal_id
+GROUP BY 
+    dt.tiempo_mes,
+    dt.tiempo_año,
+    ds.sucursal_id
+ORDER BY
+    ds.sucursal_id,
+    dt.tiempo_mes,
+    dt.tiempo_año
+
+--======================================================= VIEW2 FACTURA PROMEDIO MENSUAL =======================================================================
+
+GO
+CREATE VIEW MAND.FACTURA_PROMEDIO_MENSUAL
+AS
+SELECT 
+    du.ubicacion_provincia AS [PROVINCIA],
+    dt.tiempo_cuatrimestre AS [CUATRIMESTRE],
+    dt.tiempo_año AS [AÑO],
+    SUM(hie.ingreso) / SUM(hie.cant_facturas) AS [PROMEDIO MENSUAL]
+FROM MAND.HECHOS_INGRESOS_EGRESOS hie
+    JOIN MAND.DIMENSION_UBICACION du
+        ON hie.dimension_ubicacion = du.ubicacion_codigo
+    JOIN MAND.DIMENSION_TIEMPO dt
+        ON dt.tiempo_codigo = hie.dimension_tiempo
+GROUP BY 
+    dt.tiempo_mes,
+    dt.tiempo_cuatrimestre,
+    dt.tiempo_año,
+    du.ubicacion_provincia
+ORDER BY 
+    dt.tiempo_mes,
+    dt.tiempo_cuatrimestre,
+    dt.tiempo_año,
+    du.ubicacion_provincia
+
+--======================================================= VIEW3 RENDIMIENTO DE MODELOS =======================================================================
+
+GO
+
+
+create view MAND.RENDIMIENTO_DE_MODELOS
+as
+select top 3 m.modelo_nombre
+from MAND.HECHOS_INGRESOS_EGRESOS as h
+join MAND.DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
+join MAND.DIMENSION_MODELO as m on m.modelo_codigo = h.dimension_modelo
+group by t.tiempo_año, t.tiempo_cuatrimestre, h.dimension_ubicacion,h.dimension_rango_etario
+order by h.cantidad_sillones desc
+
+
+--======================================================= VIEW4 RENDIMIENTO DE MODELOS =======================================================================
+go
+
+CREATE view MAND.VOLUMEN_DE_PEDIDOS
+as
+select sum(h.cant_pedidos) as cantidad, t.tiempo_año as anio, t.tiempo_mes as mes, turno_detalle as tur.turno, suc.sucursal_id as sucursal
+from MAND.HECHOS_PEDIDOS as h
+join MAND.DIMENSION_TIEMPO  as t on h.dimension_tiempo = t.tiempo_codigo
+join MAND.DIMENSION_TURNO_PEDIDO as tur on h.dimension_turno_pedido = tur.turno_codigo
+join MAND.DIMENSION_SUCURSAL as suc on h.dimension_sucursal = suc.sucursal_id
+group by t.tiempo_año,t.tiempo_mes,suc.sucursal_id,tur.turno_detalle
+
+--======================================================= VIEW5 RENDIMIENTO DE MODELOS =======================================================================
+go
+
+create view MAND.CONVERSION_DE_PEDIDOS
+as
+select sum(h.cant_pedidos) as cantidad,e.estado_pedido_detalle as estado, t.tiempo_año as anio, t.tiempo_cuatrimestre as cuatrimestre,s.sucursal_id as sucursal
+from MAND.HECHOS_PEDIDOS as h
+join MAND.DIMENSION_ESTADO_PEDIDO as e on e.estado_pedido_codigo = h.dimension_estado_pedido
+join MAND.DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
+join MAND.DIMENSION_SUCURSAL as s on s.sucursal_id = h.dimension_sucursal
+group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
+
+--======================================================= VIEW6 TIEMPO PROMEDIO FABRICACIÓN =======================================================================
+
+GO
+CREATE VIEW MAND.TIEMPO_PROMEDIO_FABRICACION
+AS
+SELECT
+    ds.sucursal_id AS [SUCURSAL],
+    dt.tiempo_año AS [AÑO],
+    dt.tiempo_cuatrimestre AS [CUATRIMESTRE],
+    AVG(hie.promedio_fabricacion) AS [TIEMPO PROMEDIO FABRICACION]
+FROM MAND.HECHOS_INGRESOS_EGRESOS hie
+JOIN MAND.DIMENSION_TIEMPO dt
+    ON hie.dimension_tiempo = dt.tiempo_codigo
+JOIN MAND.DIMENSION_SUCURSAL ds
+    ON ds.sucursal_id = hie.dimension_sucursal
+GROUP BY 
+    dt.tiempo_año, 
+    dt.tiempo_cuatrimestre, 
+    ds.sucursal_id
+ORDER BY dt.tiempo_año, dt.tiempo_cuatrimestre, ds.sucursal_id
+
+--======================================================= VIEW7 PROMEDIO COMPRAS =======================================================================
+
+GO
+CREATE VIEW MAND.PROMEDIO_COMPRAS
+AS
+SELECT 
+    dt.tiempo_año AS [AÑO],
+    dt.tiempo_mes AS [MES],
+    SUM(cm.importe_total) / SUM(cm.cant_compras) AS [PROMEDIO COMPRAS]
+FROM MAND.HECHOS_COMPRAS_MATERIAL cm
+JOIN MAND.DIMENSION_TIEMPO dt
+    ON cm.dimension_tiempo = dt.tiempo_codigo
+GROUP BY 
+    dt.tiempo_año, 
+    dt.tiempo_mes
+ORDER BY 
+    dt.tiempo_año, 
+    dt.tiempo_mes
+
+--======================================================= VIEW8 PROMEDIO COMPRAS =======================================================================
+GO
+CREATE VIEW MAND.COMPRAS_POR_TIPO_MATERIAL
+AS
+SELECT
+    dt.tiempo_año AS [AÑO],
+    dt.tiempo_cuatrimestre AS [CUATRIMESTRE],
+    ds.sucursal_id AS [SUCURSAL],
+    tm.tipo_material_detalle AS [TIPO MATERIAL],
+    SUM(cm.importe_total) AS [IMPORTE TOTAL]
+FROM MAND.HECHOS_COMPRAS_MATERIAL cm
+    JOIN MAND.DIMENSION_TIPO_MATERIAL tm
+        ON cm.dimension_tipo_material = tm.tipo_material
+    JOIN MAND.DIMENSION_TIEMPO dt
+        ON cm.dimension_tiempo = dt.tiempo_codigo
+    JOIN MAND.DIMENSION_SUCURSAL ds
+        ON cm.dimension_sucursal = cm.dimension_sucursal
+GROUP BY 
+    dt.tiempo_año,
+    dt.tiempo_cuatrimestre,
+    ds.sucursal_id,
+    tm.tipo_material_detalle
+--======================================================= VIEW9 PORCENTAJE CUMPLIMIENTO EMVIOS =======================================================================
+
+GO
+CREATE VIEW MAND.PORCENTAJE_CUMPLIMIENTO_EMVIOS 
+AS
+select dt.tiempo_año AS [AÑO] ,
+dt.tiempo_mes AS [MES],
+sum(he.envios_cumplidos)*100/sum(he.envios_totales) as [PORCENTAJE_DE_ENVIOS_CUMPLIDOS] 
+FROM
+MAND.HECHOS_ENVIOS he join MAND.DIMENSION_TIEMPO dt on dt.tiempo_codigo=he.dimension_tiempo
+GROUP by dt.tiempo_mes,dt.tiempo_año
+
+--======================================================= VIEW10 LOCALIDADES_QUE_PAGAN_MAYOR_COSTO_DE_ENVIO =======================================================================
+
+GO
+CREATE VIEW MAND.LOCALIDADES_QUE_PAGAN_MAYOR_COSTO_DE_ENVIO
+AS
+SELECT top 3 du.ubicacion_locaclidad as [LOCALIDAD] FROM
+MAND.HECHOS_ENVIOS he JOIN MAND.DIMENSION_UBICACION du on du.ubicacion_codigo=he.dimension_ubicacion
+group by du.ubicacion_locaclidad
+order by sum(he.promedio_envio) desc
+
+
+
+
+-- CREATE IF EXISTS Y DROPS TABLES, PROCEDURES Y FUNCTIOS
+-- SP PARA EJECUTAR TODA LA MIGRACION
+-- PROBAR LAS VIEWS
+-- ACTUALIZAR LOS DER
+-- ARMAR EL DOC DE ESTRATEGIA: EXPLICAR POR QUE HICIMOS CADA TABLA DE HECHOS Y A QUE VIEWS RESPONDEN, AGREGAMOS UNA DIM PARA SUCURSAL.

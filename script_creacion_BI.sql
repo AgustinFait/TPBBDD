@@ -336,10 +336,59 @@ GO
 create procedure MAND.MIGRAR_PEDIDOS_ENVIOS
 AS
 BEGIN
-
-
+    -- TIEMPO, SUCURSAL, RANGO ETARIO, MODELO, TIPO MATERIAL, UBICACION
+    -- INGRESO Y CANTIDAD FACTURACION: FACTURA E ITEM FACTURA 
+    -- EGRESO: COMPRA E ITEM COMPRA
+    -- CANTIDAD SILLONES Y PROMEDIO FABRICACIÓN
 
 
 
 END
 GO
+
+SELECT 
+    dt.tiempo_codigo AS [TIEMPO ID], -- TIEMPO
+    f.factura_sucursal AS [SUCURSAL], -- SUCURSAL
+    s.sillon_modelo AS [MODELO], -- MODELO
+    CASE WHEN 2025 - YEAR(c.cliente_fechaNacimieto) < 25 THEN '<25' ELSE '>25' END AS [RANGO ETARIO], -- RANGO ETARIO
+    du.ubicacion_codigo AS [UBICACION], -- UBICACION
+    SUM(df.detalle_factura_subtotal) AS [INGRESOS],  -- DATA INGRESOS
+    COUNT(DISTINCT f.factura_nro) AS [CANT FACTURAS] -- DATA CANT FACTURAS
+    -- EGRESOS
+    -- PROMEDIO FABRICACION
+    -- CANT SILLONES (?)
+FROM MAND.FACTURA f
+    JOIN MAND.DIMENSION_TIEMPO dt
+        ON YEAR(f.factura_fecha_hora) = dt.tiempo_año
+        AND MONTH(f.factura_fecha_hora) = dt.tiempo_mes
+        AND MAND.getCuatrimestre(factura_fecha_hora) = dt.tiempo_cuatrimestre 
+    JOIN MAND.DETALLE_FACTURA df
+        ON df.detalle_factura_factura = f.factura_nro
+    JOIN MAND.DETALLE_PEDIDO dp
+        ON df.detalle_factura_detalle_pedido = dp.detalle_pedido_id
+    JOIN MAND.SILLON s
+        ON dp.sillon_id = s.sillon_codigo
+    JOIN MAND.CLIENTE c
+        ON f.factura_cliente = c.cliente_dni
+    JOIN MAND.SUCURSAL suc
+        ON suc.sucursal_codigo = f.factura_sucursal
+    JOIN MAND.DIRECCION d
+        ON suc.sucursal_direccion = d.dir_codigo
+    JOIN MAND.LOCALIDAD l
+        ON d.dir_localidad = l.loc_codigo
+    JOIN MAND.PROVINCIA p
+        ON l.loc_provincia = p.prov_codigo
+    JOIN MAND.DIMENSION_UBICACION du
+        ON p.prov_nombre = du.ubicacion_provincia
+        AND l.loc_nombre = du.ubicacion_locaclidad
+GROUP BY 
+    dt.tiempo_codigo, 
+    f.factura_sucursal,
+    s.sillon_modelo,
+    du.ubicacion_codigo,
+    CASE WHEN 2025 - YEAR(c.cliente_fechaNacimieto) < 25 THEN '<25' ELSE '>25' END
+ORDER BY 1
+
+SELECT * FROM MAND.DIMENSION_UBICACION
+
+SELECT * FROM MAND.MEDIDA

@@ -19,6 +19,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+	DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS;
+	DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_COMPRA_MATERIAL;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_ING_EGR;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_ENVIOS;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_PEDIDOS;
+
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_ESTADO_PEDIDO;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_MODELO;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_RANGO_ETARIO;
@@ -28,11 +34,7 @@ BEGIN
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_UBICACION;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_TIEMPO;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIMENSIONES;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS;
-	DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_COMPRA_MATERIAL;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_ING_EGR;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_ENVIOS;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_PEDIDOS;
+
     DROP FUNCTION IF EXISTS MAND.rango_etario_id;
     DROP FUNCTION IF EXISTS MAND.TURNO;
     DROP FUNCTION IF EXISTS MAND.getCuatrimestre;
@@ -52,6 +54,12 @@ CREATE PROCEDURE MAND.LIMPIAR_TABLAS_BI
 AS
 BEGIN
     SET NOCOUNT ON;
+
+	DROP TABLE IF EXISTS MAND.HECHOS_COMPRAS_MATERIAL;
+	DROP TABLE IF EXISTS MAND.HECHOS_ENVIOS;
+	DROP TABLE IF EXISTS MAND.HECHOS_INGRESOS_EGRESOS;
+	DROP TABLE IF EXISTS MAND.HECHOS_COMPRAS_MATERIAL;
+	DROP TABLE IF EXISTS MAND.HECHOS_PEDIDOS;
 	DROP TABLE IF EXISTS MAND.DIMENSION_ESTADO_PEDIDO;
 	DROP TABLE IF EXISTS MAND.DIMENSION_MODELO;
 	DROP TABLE IF EXISTS MAND.DIMENSION_RANGO_ETARIO;
@@ -60,11 +68,6 @@ BEGIN
 	DROP TABLE IF EXISTS MAND.DIMENSION_TIPO_MATERIAL;
 	DROP TABLE IF EXISTS MAND.DIMENSION_TURNO_PEDIDO;
 	DROP TABLE IF EXISTS MAND.DIMENSION_UBICACION;
-	DROP TABLE IF EXISTS MAND.HECHOS_COMPRAS_MATERIAL;
-	DROP TABLE IF EXISTS MAND.HECHOS_ENVIOS;
-	DROP TABLE IF EXISTS MAND.HECHOS_INGRESOS_EGRESOS;
-	DROP TABLE IF EXISTS MAND.HECHOS_COMPRAS_MATERIAL;
-	DROP TABLE IF EXISTS MAND.HECHOS_PEDIDOS;
 END;
 GO
 
@@ -75,6 +78,8 @@ GO
 
 
 DROP PROCEDURE IF EXISTS MAND.ELIMINAR_VISTAS;
+
+go
 
 CREATE PROCEDURE MAND.ELIMINAR_VISTAS
 AS
@@ -154,14 +159,12 @@ CREATE table MAND.DIMENSION_TURNO_PEDIDO
     turno_codigo bigint IDENTITY(1,1) primary key,
     turno_detalle nvarchar(255)
 )
-go
-alter table MAND.DIMENSION_TURNO_PEDIDO
-add CONSTRAINT chk_turno_detalle CHECK (turno_detalle IN ('08:00 a 14:00','14:00 a 20:00'))
+
 
 go
 CREATE table MAND.DIMENSION_ESTADO_PEDIDO
 (
-    estado_pedido_codigo bigint IDENTITY(1,1) primary KEY,
+    estado_pedido_codigo bigint primary KEY,
     estado_pedido_detalle nvarchar(255)
 )
 go
@@ -196,7 +199,7 @@ CREATE TABLE MAND.HECHOS_PEDIDOS
     dimension_ubicacion bigint,
     dimension_turno_pedido bigint,
     dimension_estado_pedido bigint,
-    cant_pedidos decimal(12,2),
+    cant_pedidos int,
     PRIMARY KEY (
         dimension_tiempo,
         dimension_sucursal,
@@ -237,8 +240,8 @@ ADD CONSTRAINT FK_ComprasMaterialTiempo
 FOREIGN KEY (dimension_tiempo) REFERENCES MAND.DIMENSION_TIEMPO(tiempo_codigo)
 
 ALTER TABLE MAND.HECHOS_COMPRAS_MATERIAL
-ADD CONSTRAINT FK_ComprasMateriallUbicacion
-FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.DIMENSION_UBICACION(ubicacion_codigo)
+ADD CONSTRAINT FK_ComprasMateriallSucursal
+FOREIGN KEY (dimension_sucursal) REFERENCES MAND.DIMENSION_SUCURSAL(sucursal_id)
 
 ALTER TABLE MAND.HECHOS_COMPRAS_MATERIAL
 ADD CONSTRAINT FK_ComprasMaterialTipoMaterial
@@ -288,7 +291,7 @@ FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.DIMENSION_UBICACION(ubicacion_
 
 ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosTurno
-FOREIGN KEY (dimension_sucursal) REFERENCES MAND.DIMENSION_TURNO_PEDIDO(turno_codigo)
+FOREIGN KEY (dimension_turno_pedido) REFERENCES MAND.DIMENSION_TURNO_PEDIDO(turno_codigo)
 
 ALTER TABLE MAND.HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosSucursal
@@ -450,14 +453,23 @@ GO
 create procedure MAND.MIGRACION_DIMENSIONES
 as
 BEGIN
+	print 'migrando dimension tiempo'
     EXEC MAND.MIGRACION_DIM_TIEMPO
+	print 'migrando dimension ubicacion'
     EXEC MAND.MIGRACION_DIM_UBICACION
+	print 'migrando dimension turno pedido'
     EXEC MAND.MIGRACION_DIM_TURNO_PEDIDO
+	print 'migrando dimension estado pedido'
     EXEC MAND.MIGRACION_DIM_ESTADO_PEDIDO
+	print 'migrando dimension sucursal'
     EXEC MAND.MIGRACION_DIM_SUCURSAL
+	print 'migrando dimension rango etario'
     EXEC MAND.MIGRACION_DIM_RANGO_ETARIO
+	print 'migrando dimension modelo'
     EXEC MAND.MIGRACION_DIM_MODELO
+	print 'migrando dimension tipo material'
     EXEC MAND.MIGRACION_DIM_TIPO_MATERIAL
+
 END
 GO
 
@@ -488,16 +500,19 @@ BEGIN
     SELECT
         dt.tiempo_codigo AS [TIEMPO ID], -- TIEMPO
         f.factura_sucursal AS [SUCURSAL], -- SUCURSAL
-        s.sillon_modelo AS [MODELO], -- MODELO
-        MAND.rango_etario_id(c.cliente_fechaNacimieto) AS [RANGO ETARIO], -- RANGO ETARIO
-        du.ubicacion_codigo AS [UBICACION], -- UBICACION
+		MAND.rango_etario_id(c.cliente_fechaNacimieto) AS [RANGO ETARIO], -- RANGO ETARIO
+		s.sillon_modelo AS [MODELO], -- MODELO
+		du.ubicacion_codigo AS [UBICACION], -- UBICACION
+
+
+
         ISNULL(SUM(df.detalle_factura_subtotal),0) AS [INGRESOS], -- DATA INGRESOS
-        COUNT(DISTINCT f.factura_nro) AS [CANT FACTURAS], -- DATA CANT FACTURAS
-        (select isnull(sum(compra_total),0)
+		 (select isnull(sum(compra_total),0)
         from MAND.COMPRA
         where YEAR(compra_fecha) = dt.tiempo_año and MONTH(compra_fecha) = dt.tiempo_mes and compra_sucursal = f.factura_sucursal ) AS [EGRESOS], -- EGRESOS
-        avg(datediff(day,ped.pedido_fecha_hora,f.factura_fecha_hora)) AS [PROMEDIO FABRICACION], -- PROMEDIO FABRICACION
-        ISNULL(SUM(dp.pedido_det_cantidad),0) AS [CANT SILLONES]-- CANT SILLONES (?)
+        COUNT(DISTINCT f.factura_nro) AS [CANT FACTURAS], -- DATA CANT FACTURAS
+		ISNULL(SUM(dp.pedido_det_cantidad),0) AS [CANT SILLONES],-- CANT SILLONES (?)
+        avg(datediff(day,ped.pedido_fecha_hora,f.factura_fecha_hora)) AS [PROMEDIO FABRICACION] -- PROMEDIO FABRICACION
     FROM MAND.FACTURA f
         JOIN MAND.DIMENSION_TIEMPO dt
         ON YEAR(f.factura_fecha_hora) = dt.tiempo_año
@@ -541,7 +556,6 @@ GO
 
 create function MAND.turno(@horario datetime2)
 returns bigint
-
 as
 BEGIN
     if( DATEPART(hh,@horario) > 14)
@@ -605,8 +619,8 @@ BEGIN
     INSERT INTO MAND.HECHOS_COMPRAS_MATERIAL
     
     SELECT 
+	    dt.tiempo_codigo,
         c.compra_sucursal, 
-        dt.tiempo_codigo,
         tm.tipo_material_codigo,
         SUM(cd.compra_det_subtotal) AS [COMPRA TOTAL],
         COUNT(DISTINCT c.compra_numero) AS [CANT COMPRAS]
@@ -679,14 +693,20 @@ GO
 create procedure MAND.MIGRACION_HECHOS
 as
 BEGIN
+	print 'migrando hechos compra material'
     EXEC MAND.MIGRACION_HECHOS_COMPRA_MATERIAL
+	print 'migrando hechos envios'
     EXEC MAND.MIGRACION_HECHOS_ENVIOS
+	print 'migrando hechos ingresos egresos'
     EXEC MAND.MIGRACION_HECHOS_ING_EGR
+	print 'migrando hechos pedidos'
     EXEC MAND.MIGRACION_HECHOS_PEDIDOS
 END
 GO
 
 EXEC MAND.MIGRACION_HECHOS
+
+-- select * from MAND.DIMENSION_TURNO_PEDIDO
 
 --======================================================= VIEWS =======================================================================
 

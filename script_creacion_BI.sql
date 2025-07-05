@@ -21,9 +21,9 @@ BEGIN
 
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_COMPRA_MATERIAL;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_BI_HECHOS_INGRESOS;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_BI_HECHOS_ENVIOS;
-    DROP PROCEDURE IF EXISTS MAND.MIGRACION_BI_HECHOS_PEDIDOS;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_INGRESOS;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_ENVIOS;
+    DROP PROCEDURE IF EXISTS MAND.MIGRACION_HECHOS_PEDIDOS;
 
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_ESTADO_PEDIDO;
     DROP PROCEDURE IF EXISTS MAND.MIGRACION_DIM_MODELO;
@@ -172,134 +172,134 @@ go
 
 CREATE TABLE MAND.BI_HECHOS_INGRESOS
 (
-    BI_DIMENSION_TIEMPO bigint NOT NULL,
-    BI_DIMENSION_SUCURSAL bigint NOT NULL,
-    BI_DIMENSION_RANGO_ETARIO bigint NOT NULL,
-    BI_DIMENSION_MODELO bigint NOT NULL,
-    BI_DIMENSION_UBICACION bigint NOT NULL,
+    dimension_tiempo bigint NOT NULL,
+    dimension_sucursal bigint NOT NULL,
+    dimension_rango_etario bigint NOT NULL,
+    dimension_modelo bigint NOT NULL,
+    dimension_ubicacion bigint NOT NULL,
     ingreso decimal(38,2) NOT NULL,
     cant_facturas bigint NOT NULL,
     cantidad_sillones bigint NOT NULL,
     promedio_fabricacion int NOT NULL,
     PRIMARY KEY (
-        BI_DIMENSION_TIEMPO,
-        BI_DIMENSION_SUCURSAL,
-        BI_DIMENSION_RANGO_ETARIO,
-        BI_DIMENSION_MODELO,
-        BI_DIMENSION_UBICACION
+        dimension_tiempo,
+        dimension_sucursal,
+        dimension_rango_etario,
+        dimension_modelo,
+        dimension_ubicacion
     )
 )
 
 CREATE TABLE MAND.BI_HECHOS_PEDIDOS
 (
-    BI_DIMENSION_TIEMPO bigint,
-    BI_DIMENSION_SUCURSAL bigint,
-    BI_DIMENSION_UBICACION bigint,
-    BI_DIMENSION_TURNO_PEDIDO bigint,
-    BI_DIMENSION_ESTADO_PEDIDO bigint,
+    dimension_tiempo bigint,
+    dimension_sucursal bigint,
+    dimension_ubicacion bigint,
+    dimension_turno_pedido bigint,
+    dimension_estado_pedido bigint,
     cant_pedidos int,
     PRIMARY KEY (
-        BI_DIMENSION_TIEMPO,
-        BI_DIMENSION_SUCURSAL,
-        BI_DIMENSION_UBICACION,
-        BI_DIMENSION_TURNO_PEDIDO,
-        BI_DIMENSION_ESTADO_PEDIDO
+        dimension_tiempo,
+        dimension_sucursal,
+        dimension_ubicacion,
+        dimension_turno_pedido,
+        dimension_estado_pedido
     )
 )
 
 CREATE TABLE MAND.BI_HECHOS_COMPRAS_MATERIAL
 (
-    BI_DIMENSION_TIEMPO bigint NOT NULL,
-    BI_DIMENSION_SUCURSAL bigint NOT NULL,
-    BI_DIMENSION_TIPO_MATERIAL bigint NOT NULL,
+    dimension_tiempo bigint NOT NULL,
+    dimension_sucursal bigint NOT NULL,
+    dimension_tipo_material bigint NOT NULL,
     importe_total decimal(38,2) NOT NULL,
     cant_compras bigint NOT NULL
         PRIMARY KEY(
-        BI_DIMENSION_TIEMPO,
-        BI_DIMENSION_SUCURSAL,
-        BI_DIMENSION_TIPO_MATERIAL
+        dimension_tiempo,
+        dimension_sucursal,
+        dimension_tipo_material
     )
 )
 
 create table MAND.BI_HECHOS_ENVIOS
 (
-    BI_DIMENSION_TIEMPO bigint,
-    BI_DIMENSION_UBICACION bigint,
+    dimension_tiempo bigint,
+    dimension_ubicacion bigint,
     envios_cumplidos int,
     envios_totales int,
     promedio_envio decimal(12,2)
         PRIMARY KEY(
-        BI_DIMENSION_TIEMPO,
-        BI_DIMENSION_UBICACION
+        dimension_tiempo,
+        dimension_ubicacion
     )
 )
 
 --======================================================= FK COMPRAS MATERIAL ========================================================================
 ALTER TABLE MAND.BI_HECHOS_COMPRAS_MATERIAL
 ADD CONSTRAINT FK_ComprasMaterialTiempo
-FOREIGN KEY (BI_DIMENSION_TIEMPO) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_COMPRAS_MATERIAL
 ADD CONSTRAINT FK_ComprasMateriallSucursal
-FOREIGN KEY (BI_DIMENSION_SUCURSAL) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
+FOREIGN KEY (dimension_sucursal) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
 
 ALTER TABLE MAND.BI_HECHOS_COMPRAS_MATERIAL
 ADD CONSTRAINT FK_ComprasMaterialTipoMaterial
-FOREIGN KEY (BI_DIMENSION_TIPO_MATERIAL) REFERENCES MAND.BI_DIMENSION_TIPO_MATERIAL(tipo_material)
+FOREIGN KEY (dimension_tipo_material) REFERENCES MAND.BI_DIMENSION_TIPO_MATERIAL(tipo_material)
 
 --======================================================= FK ENVIOS  ==================================================================-
 
 ALTER TABLE MAND.BI_HECHOS_ENVIOS
 ADD CONSTRAINT FK_enviosTiempo
-FOREIGN KEY (BI_DIMENSION_TIEMPO) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_ENVIOS
 ADD CONSTRAINT FK_enviosUbicacion
-FOREIGN KEY (BI_DIMENSION_UBICACION) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
+FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
 
 --======================================================= FK INGRESO_EGRESO ========================================================================
 
 ALTER TABLE MAND.BI_HECHOS_INGRESOS
 ADD CONSTRAINT FK_ingresoModelo
-FOREIGN KEY (BI_DIMENSION_MODELO) REFERENCES MAND.BI_DIMENSION_MODELO(modelo_codigo)
+FOREIGN KEY (dimension_modelo) REFERENCES MAND.BI_DIMENSION_MODELO(modelo_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_INGRESOS
 ADD CONSTRAINT FK_ingresoRango
-FOREIGN KEY (BI_DIMENSION_RANGO_ETARIO) REFERENCES MAND.BI_DIMENSION_RANGO_ETARIO(rango_etario_codigo)
+FOREIGN KEY (dimension_rango_etario) REFERENCES MAND.BI_DIMENSION_RANGO_ETARIO(rango_etario_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_INGRESOS
 ADD CONSTRAINT FK_ingresoEgresoTiempo
-FOREIGN KEY (BI_DIMENSION_TIEMPO) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_INGRESOS
 ADD CONSTRAINT FK_ingresoEgresoUbicacion
-FOREIGN KEY (BI_DIMENSION_UBICACION) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
+FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_INGRESOS
 ADD CONSTRAINT FK_ingresoEgresoSucursal
-FOREIGN KEY (BI_DIMENSION_SUCURSAL) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
+FOREIGN KEY (dimension_sucursal) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
 
 --======================================================= FK PEDIDOS  ========================================================================
 
 ALTER TABLE MAND.BI_HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosTiempo
-FOREIGN KEY (BI_DIMENSION_TIEMPO) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
+FOREIGN KEY (dimension_tiempo) REFERENCES MAND.BI_DIMENSION_TIEMPO(tiempo_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosUbicacion
-FOREIGN KEY (BI_DIMENSION_UBICACION) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
+FOREIGN KEY (dimension_ubicacion) REFERENCES MAND.BI_DIMENSION_UBICACION(ubicacion_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosTurno
-FOREIGN KEY (BI_DIMENSION_TURNO_PEDIDO) REFERENCES MAND.BI_DIMENSION_TURNO_PEDIDO(turno_codigo)
+FOREIGN KEY (dimension_turno_pedido) REFERENCES MAND.BI_DIMENSION_TURNO_PEDIDO(turno_codigo)
 
 ALTER TABLE MAND.BI_HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosSucursal
-FOREIGN KEY (BI_DIMENSION_SUCURSAL) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
+FOREIGN KEY (dimension_sucursal) REFERENCES MAND.BI_DIMENSION_SUCURSAL(sucursal_id)
 
 ALTER TABLE MAND.BI_HECHOS_PEDIDOS
 ADD CONSTRAINT FK_pedidoEnviosPedidoEstado
-FOREIGN KEY (BI_DIMENSION_ESTADO_PEDIDO) REFERENCES MAND.BI_DIMENSION_ESTADO_PEDIDO(estado_pedido_codigo)
+FOREIGN KEY (dimension_estado_pedido) REFERENCES MAND.BI_DIMENSION_ESTADO_PEDIDO(estado_pedido_codigo)
 
 --======================================================= CHE ===================================================================
 
@@ -492,7 +492,7 @@ end
 
 GO
 
-CREATE PROCEDURE MAND.MIGRACION_BI_HECHOS_INGRESOS
+CREATE PROCEDURE MAND.MIGRACION_HECHOS_INGRESOS
 AS
 BEGIN
     INSERT INTO MAND.BI_HECHOS_INGRESOS
@@ -562,7 +562,7 @@ end
 
 --DROP FUNCTION MAND.turno
 GO
-create procedure MAND.MIGRACION_BI_HECHOS_PEDIDOS
+create procedure MAND.MIGRACION_HECHOS_PEDIDOS
 AS
 BEGIN
     -- TIEMPO, SUCURSAL, UBICACION, estado_pedido, turno_pedido
@@ -644,7 +644,7 @@ END
 --======================================================= SP ENVIOS=======================================================================
 
 GO
-create procedure MAND.MIGRACION_BI_HECHOS_ENVIOS
+create procedure MAND.MIGRACION_HECHOS_ENVIOS
 AS
 BEGIN
 
@@ -691,11 +691,11 @@ BEGIN
     print 'migrando hechos compra material'
     EXEC MAND.MIGRACION_HECHOS_COMPRA_MATERIAL
     print 'migrando hechos envios'
-    EXEC MAND.MIGRACION_BI_HECHOS_ENVIOS
+    EXEC MAND.MIGRACION_HECHOS_ENVIOS
     print 'migrando hechos ingresos'
-    EXEC MAND.MIGRACION_BI_HECHOS_INGRESOS
+    EXEC MAND.MIGRACION_HECHOS_INGRESOS
     print 'migrando hechos pedidos'
-    EXEC MAND.MIGRACION_BI_HECHOS_PEDIDOS
+    EXEC MAND.MIGRACION_HECHOS_PEDIDOS
 END
 GO
 
@@ -719,17 +719,17 @@ AS
             SELECT ISNULL(SUM(hcm.importe_total),0)
             FROM MAND.BI_HECHOS_COMPRAS_MATERIAL hcm
             JOIN MAND.BI_DIMENSION_TIEMPO dt2
-                ON dt2.tiempo_codigo = hcm.BI_DIMENSION_TIEMPO
+                ON dt2.tiempo_codigo = hcm.dimension_tiempo
             WHERE 
                 dt2.tiempo_mes = dt.tiempo_mes
                 AND dt2.tiempo_año = dt.tiempo_año
-                AND ds.sucursal_id = hcm.BI_DIMENSION_SUCURSAL
+                AND ds.sucursal_id = hcm.dimension_sucursal
         ) AS [GANANCIAS]
     FROM MAND.BI_HECHOS_INGRESOS hie
         JOIN MAND.BI_DIMENSION_TIEMPO dt
-        ON hie.BI_DIMENSION_TIEMPO = dt.tiempo_codigo
+        ON hie.dimension_tiempo = dt.tiempo_codigo
         JOIN MAND.BI_DIMENSION_SUCURSAL ds
-        ON hie.BI_DIMENSION_SUCURSAL = ds.sucursal_id
+        ON hie.dimension_sucursal = ds.sucursal_id
     GROUP BY 
     dt.tiempo_mes,
     dt.tiempo_año,
@@ -748,9 +748,9 @@ AS
         SUM(hie.ingreso) / SUM(hie.cant_facturas) AS [PROMEDIO MENSUAL]
     FROM MAND.BI_HECHOS_INGRESOS hie
         JOIN MAND.BI_DIMENSION_UBICACION du
-        ON hie.BI_DIMENSION_UBICACION = du.ubicacion_codigo
+        ON hie.dimension_ubicacion = du.ubicacion_codigo
         JOIN MAND.BI_DIMENSION_TIEMPO dt
-        ON dt.tiempo_codigo = hie.BI_DIMENSION_TIEMPO
+        ON dt.tiempo_codigo = hie.dimension_tiempo
     GROUP BY 
     dt.tiempo_cuatrimestre,
     dt.tiempo_año,
@@ -769,12 +769,12 @@ as
         m.modelo_nombre AS [MODELO],
         SUM(cantidad_sillones) AS [TOTAL SILLONES]
     from MAND.BI_HECHOS_INGRESOS as h
-        join MAND.BI_DIMENSION_TIEMPO as t on t.tiempo_codigo = h.BI_DIMENSION_TIEMPO
-        join MAND.BI_DIMENSION_MODELO as m on m.modelo_codigo = h.BI_DIMENSION_MODELO
+        join MAND.BI_DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
+        join MAND.BI_DIMENSION_MODELO as m on m.modelo_codigo = h.dimension_modelo
         JOIN MAND.BI_DIMENSION_RANGO_ETARIO dr 
-            ON dr.rango_etario_codigo = h.BI_DIMENSION_RANGO_ETARIO
+            ON dr.rango_etario_codigo = h.dimension_rango_etario
         JOIN MAND.BI_DIMENSION_UBICACION du
-            ON du.ubicacion_codigo = h.BI_DIMENSION_UBICACION
+            ON du.ubicacion_codigo = h.dimension_ubicacion
     group by 
         t.tiempo_año, 
         t.tiempo_cuatrimestre, 
@@ -786,22 +786,22 @@ as
             m2.modelo_nombre
         from MAND.BI_HECHOS_INGRESOS as h2
             join MAND.BI_DIMENSION_TIEMPO as t2 
-                on t2.tiempo_codigo = h2.BI_DIMENSION_TIEMPO
+                on t2.tiempo_codigo = h2.dimension_tiempo
                 and t2.tiempo_año = t.tiempo_año
                 and t2.tiempo_cuatrimestre = t.tiempo_cuatrimestre
             JOIN MAND.BI_DIMENSION_UBICACION du2
-                ON du2.ubicacion_codigo = h2.BI_DIMENSION_UBICACION
+                ON du2.ubicacion_codigo = h2.dimension_ubicacion
                 and du2.ubicacion_locaclidad = du.ubicacion_locaclidad
             JOIN MAND.BI_DIMENSION_RANGO_ETARIO dr2 
-                ON dr2.rango_etario_codigo = h2.BI_DIMENSION_RANGO_ETARIO
+                ON dr2.rango_etario_codigo = h2.dimension_rango_etario
                 and dr2.rango_etario_detalle = dr.rango_etario_detalle
             join MAND.BI_DIMENSION_MODELO as m2 
-                on m2.modelo_codigo = h2.BI_DIMENSION_MODELO
+                on m2.modelo_codigo = h2.dimension_modelo
         group by
             t2.tiempo_año, 
             t2.tiempo_cuatrimestre, 
             du2.ubicacion_locaclidad,
-            h2.BI_DIMENSION_RANGO_ETARIO,
+            h2.dimension_rango_etario,
             m2.modelo_nombre
         ORDER BY SUM(cantidad_sillones) DESC
     )
@@ -814,9 +814,9 @@ CREATE view MAND.VOLUMEN_DE_PEDIDOS
 as
     select sum(h.cant_pedidos) as cantidad, t.tiempo_año as anio, t.tiempo_mes as mes, turno_detalle as turno, suc.sucursal_id as sucursal
     from MAND.BI_HECHOS_PEDIDOS as h
-        join MAND.BI_DIMENSION_TIEMPO  as t on h.BI_DIMENSION_TIEMPO = t.tiempo_codigo
-        join MAND.BI_DIMENSION_TURNO_PEDIDO as tur on h.BI_DIMENSION_TURNO_PEDIDO = tur.turno_codigo
-        join MAND.BI_DIMENSION_SUCURSAL as suc on h.BI_DIMENSION_SUCURSAL = suc.sucursal_id
+        join MAND.BI_DIMENSION_TIEMPO  as t on h.dimension_tiempo = t.tiempo_codigo
+        join MAND.BI_DIMENSION_TURNO_PEDIDO as tur on h.dimension_turno_pedido = tur.turno_codigo
+        join MAND.BI_DIMENSION_SUCURSAL as suc on h.dimension_sucursal = suc.sucursal_id
     group by t.tiempo_año,t.tiempo_mes,suc.sucursal_id,tur.turno_detalle
 
 --======================================================= VIEW5 CONVERSION_DE_PEDIDOS =======================================================================
@@ -828,7 +828,7 @@ as
         ISNULL(
             SUM(
                 CASE
-                    WHEN e.estado_pedido_codigo = h.BI_DIMENSION_ESTADO_PEDIDO THEN h.cant_pedidos
+                    WHEN e.estado_pedido_codigo = h.dimension_estado_pedido THEN h.cant_pedidos
                     ELSE 0
                 END
             )
@@ -839,11 +839,11 @@ as
         s.sucursal_id as sucursal
     FROM MAND.BI_DIMENSION_ESTADO_PEDIDO AS e
         CROSS JOIN MAND.BI_HECHOS_PEDIDOS AS h 
-            --ON e.estado_pedido_codigo = h.BI_DIMENSION_ESTADO_PEDIDO
+            --ON e.estado_pedido_codigo = h.dimension_estado_pedido
         LEFT JOIN MAND.BI_DIMENSION_TIEMPO AS t 
-            ON t.tiempo_codigo = h.BI_DIMENSION_TIEMPO
+            ON t.tiempo_codigo = h.dimension_tiempo
         LEFT JOIN MAND.BI_DIMENSION_SUCURSAL AS s 
-            ON s.sucursal_id = h.BI_DIMENSION_SUCURSAL
+            ON s.sucursal_id = h.dimension_sucursal
         group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
 GO
 
@@ -859,9 +859,9 @@ AS
         avg(hie.promedio_fabricacion) AS [TIEMPO PROMEDIO FABRICACION]
     FROM MAND.BI_HECHOS_INGRESOS hie
         JOIN MAND.BI_DIMENSION_TIEMPO dt
-        ON hie.BI_DIMENSION_TIEMPO = dt.tiempo_codigo
+        ON hie.dimension_tiempo = dt.tiempo_codigo
         JOIN MAND.BI_DIMENSION_SUCURSAL ds
-        ON ds.sucursal_id = hie.BI_DIMENSION_SUCURSAL
+        ON ds.sucursal_id = hie.dimension_sucursal
     GROUP BY 
     dt.tiempo_año, 
     dt.tiempo_cuatrimestre, 
@@ -879,7 +879,7 @@ AS
         SUM(cm.importe_total) / SUM(cm.cant_compras) AS [PROMEDIO COMPRAS]
     FROM MAND.BI_HECHOS_COMPRAS_MATERIAL cm
         JOIN MAND.BI_DIMENSION_TIEMPO dt
-        ON cm.BI_DIMENSION_TIEMPO = dt.tiempo_codigo
+        ON cm.dimension_tiempo = dt.tiempo_codigo
     GROUP BY 
     dt.tiempo_año, 
     dt.tiempo_mes
@@ -896,11 +896,11 @@ AS
         SUM(cm.importe_total) AS [IMPORTE TOTAL]
     FROM MAND.BI_HECHOS_COMPRAS_MATERIAL cm
         JOIN MAND.BI_DIMENSION_TIPO_MATERIAL tm
-        ON cm.BI_DIMENSION_TIPO_MATERIAL = tm.tipo_material
+        ON cm.dimension_tipo_material = tm.tipo_material
         JOIN MAND.BI_DIMENSION_TIEMPO dt
-        ON cm.BI_DIMENSION_TIEMPO = dt.tiempo_codigo
+        ON cm.dimension_tiempo = dt.tiempo_codigo
         JOIN MAND.BI_DIMENSION_SUCURSAL ds
-        ON cm.BI_DIMENSION_SUCURSAL = cm.BI_DIMENSION_SUCURSAL
+        ON cm.dimension_sucursal = cm.dimension_sucursal
     GROUP BY 
     dt.tiempo_año,
     dt.tiempo_cuatrimestre,
@@ -915,7 +915,7 @@ AS
         dt.tiempo_mes AS [MES],
         sum(he.envios_cumplidos)*100/sum(he.envios_totales) as [PORCENTAJE_DE_ENVIOS_CUMPLIDOS]
     FROM
-        MAND.BI_HECHOS_ENVIOS he join MAND.BI_DIMENSION_TIEMPO dt on dt.tiempo_codigo=he.BI_DIMENSION_TIEMPO
+        MAND.BI_HECHOS_ENVIOS he join MAND.BI_DIMENSION_TIEMPO dt on dt.tiempo_codigo=he.dimension_tiempo
     GROUP by dt.tiempo_mes,dt.tiempo_año
 
 --======================================================= VIEW10 LOCALIDADES_QUE_PAGAN_MAYOR_COSTO_DE_ENVIO =======================================================================
@@ -926,7 +926,7 @@ AS
     SELECT top 3
         du.ubicacion_locaclidad as [LOCALIDAD]
     FROM
-        MAND.BI_HECHOS_ENVIOS he JOIN MAND.BI_DIMENSION_UBICACION du on du.ubicacion_codigo=he.BI_DIMENSION_UBICACION
+        MAND.BI_HECHOS_ENVIOS he JOIN MAND.BI_DIMENSION_UBICACION du on du.ubicacion_codigo=he.dimension_ubicacion
     group by du.ubicacion_locaclidad
     order by sum(he.promedio_envio) desc
 

@@ -596,7 +596,8 @@ BEGIN
         ON YEAR(ped.pedido_fecha_hora) = dt.tiempo_año
             AND MONTH(ped.pedido_fecha_hora) = dt.tiempo_mes
             AND MAND.getCuatrimestre(ped.pedido_fecha_hora) = dt.tiempo_cuatrimestre
-    GROUP by dt.tiempo_codigo, 
+    GROUP by 
+    dt.tiempo_codigo, 
     ped.pedido_sucursal, 
     du.ubicacion_codigo, 
     MAND.turno(ped.pedido_fecha_hora), 
@@ -714,14 +715,17 @@ AS
         ds.sucursal_id AS [SUCURSAL],
         dt.tiempo_mes AS [MES],
         dt.tiempo_año AS [AÑO],
-        SUM(hie.ingreso) AS [INGRESO],
+        ISNULL(SUM(hie.ingreso),0) -
         (
-            SELECT SUM(hcm.importe_total)
+            SELECT ISNULL(SUM(hcm.importe_total),0)
             FROM MAND.HECHOS_COMPRAS_MATERIAL hcm
+            JOIN MAND.DIMENSION_TIEMPO dt2
+                ON dt2.tiempo_codigo = hcm.dimension_tiempo
             WHERE 
-                hcm.dimension_tiempo = hie.dimension_tiempo
-                AND hcm.dimension_sucursal = hie.dimension_sucursal
-        ) AS [EGRESO]
+                dt2.tiempo_mes = dt.tiempo_mes
+                AND dt2.tiempo_año = dt.tiempo_año
+                AND ds.sucursal_id = hcm.dimension_sucursal
+        ) AS [GANANCIAS]
     FROM MAND.HECHOS_INGRESOS hie
         JOIN MAND.DIMENSION_TIEMPO dt
         ON hie.dimension_tiempo = dt.tiempo_codigo
@@ -731,6 +735,7 @@ AS
     dt.tiempo_mes,
     dt.tiempo_año,
     ds.sucursal_id
+
 
 --======================================================= VIEW2 FACTURA PROMEDIO MENSUAL =======================================================================
 
@@ -748,11 +753,10 @@ AS
         JOIN MAND.DIMENSION_TIEMPO dt
         ON dt.tiempo_codigo = hie.dimension_tiempo
     GROUP BY 
-    dt.tiempo_mes,
     dt.tiempo_cuatrimestre,
     dt.tiempo_año,
     du.ubicacion_provincia
-
+    ORDER BY 2,1,3
 
 --======================================================= VIEW3 RENDIMIENTO DE MODELOS =======================================================================
 
@@ -787,13 +791,20 @@ go
 
 create view MAND.CONVERSION_DE_PEDIDOS
 as
-    select sum(h.cant_pedidos) as cantidad, e.estado_pedido_detalle as estado, t.tiempo_año as anio, t.tiempo_cuatrimestre as cuatrimestre, s.sucursal_id as sucursal
+    select 
+        ISNULL(sum(h.cant_pedidos),0) as cantidad, 
+        e.estado_pedido_detalle as estado, 
+        t.tiempo_año as anio, 
+        t.tiempo_cuatrimestre as cuatrimestre, 
+        s.sucursal_id as sucursal
     from MAND.HECHOS_PEDIDOS as h
-        join MAND.DIMENSION_ESTADO_PEDIDO as e on e.estado_pedido_codigo = h.dimension_estado_pedido
-        join MAND.DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
-        join MAND.DIMENSION_SUCURSAL as s on s.sucursal_id = h.dimension_sucursal
+        join MAND.DIMENSION_TIEMPO as t 
+        on t.tiempo_codigo = h.dimension_tiempo
+        join MAND.DIMENSION_SUCURSAL as s 
+        on s.sucursal_id = h.dimension_sucursal
+        join MAND.DIMENSION_ESTADO_PEDIDO as e 
+        on e.estado_pedido_codigo = h.dimension_estado_pedido
     group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
-
 --======================================================= VIEW6 TIEMPO PROMEDIO FABRICACIÓN =======================================================================
 
 GO

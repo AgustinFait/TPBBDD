@@ -838,14 +838,14 @@ as
         t.tiempo_año as anio, 
         t.tiempo_cuatrimestre as cuatrimestre, 
         s.sucursal_id as sucursal
-FROM MAND.DIMENSION_ESTADO_PEDIDO AS e
-    CROSS JOIN MAND.HECHOS_PEDIDOS AS h 
-        --ON e.estado_pedido_codigo = h.dimension_estado_pedido
-    LEFT JOIN MAND.DIMENSION_TIEMPO AS t 
-        ON t.tiempo_codigo = h.dimension_tiempo
-    LEFT JOIN MAND.DIMENSION_SUCURSAL AS s 
-        ON s.sucursal_id = h.dimension_sucursal
-    group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
+    FROM MAND.DIMENSION_ESTADO_PEDIDO AS e
+        CROSS JOIN MAND.HECHOS_PEDIDOS AS h 
+            --ON e.estado_pedido_codigo = h.dimension_estado_pedido
+        LEFT JOIN MAND.DIMENSION_TIEMPO AS t 
+            ON t.tiempo_codigo = h.dimension_tiempo
+        LEFT JOIN MAND.DIMENSION_SUCURSAL AS s 
+            ON s.sucursal_id = h.dimension_sucursal
+        group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
 GO
 
 --======================================================= VIEW6 TIEMPO PROMEDIO FABRICACIÓN =======================================================================

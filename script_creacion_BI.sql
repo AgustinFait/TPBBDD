@@ -756,23 +756,57 @@ AS
     dt.tiempo_cuatrimestre,
     dt.tiempo_año,
     du.ubicacion_provincia
-    ORDER BY 2,1,3
 
 --======================================================= VIEW3 RENDIMIENTO DE MODELOS =======================================================================
 
 GO
-
-
 create view MAND.RENDIMIENTO_DE_MODELOS
 as
-    select top 3
-        m.modelo_nombre
+    select
+        t.tiempo_año AS [AÑO],
+        t.tiempo_cuatrimestre AS [CUATRIMESTRE],
+        dr.rango_etario_detalle AS [RANGO ETARIO],
+        du.ubicacion_locaclidad AS [LOCALIDAD],
+        m.modelo_nombre AS [MODELO],
+        SUM(cantidad_sillones) AS [TOTAL SILLONES]
     from MAND.HECHOS_INGRESOS as h
         join MAND.DIMENSION_TIEMPO as t on t.tiempo_codigo = h.dimension_tiempo
         join MAND.DIMENSION_MODELO as m on m.modelo_codigo = h.dimension_modelo
-    group by t.tiempo_año, t.tiempo_cuatrimestre, h.dimension_ubicacion,h.dimension_rango_etario,m.modelo_nombre,h.cantidad_sillones
-    order by h.cantidad_sillones desc
-
+        JOIN MAND.DIMENSION_RANGO_ETARIO dr 
+            ON dr.rango_etario_codigo = h.dimension_rango_etario
+        JOIN MAND.DIMENSION_UBICACION du
+            ON du.ubicacion_codigo = h.dimension_ubicacion
+    group by 
+        t.tiempo_año, 
+        t.tiempo_cuatrimestre, 
+        dr.rango_etario_detalle, 
+        du.ubicacion_locaclidad,
+        m.modelo_nombre
+    HAVING m.modelo_nombre IN (
+        select TOP 3
+            m2.modelo_nombre
+        from MAND.HECHOS_INGRESOS as h2
+            join MAND.DIMENSION_TIEMPO as t2 
+                on t2.tiempo_codigo = h2.dimension_tiempo
+                and t2.tiempo_año = t.tiempo_año
+                and t2.tiempo_cuatrimestre = t.tiempo_cuatrimestre
+            JOIN MAND.DIMENSION_UBICACION du2
+                ON du2.ubicacion_codigo = h2.dimension_ubicacion
+                and du2.ubicacion_locaclidad = du.ubicacion_locaclidad
+            JOIN MAND.DIMENSION_RANGO_ETARIO dr2 
+                ON dr2.rango_etario_codigo = h2.dimension_rango_etario
+                and dr2.rango_etario_detalle = dr.rango_etario_detalle
+            join MAND.DIMENSION_MODELO as m2 
+                on m2.modelo_codigo = h2.dimension_modelo
+        group by
+            t2.tiempo_año, 
+            t2.tiempo_cuatrimestre, 
+            du2.ubicacion_locaclidad,
+            h2.dimension_rango_etario,
+            m2.modelo_nombre
+        ORDER BY SUM(cantidad_sillones) DESC
+    )
+GO
 
 --======================================================= VIEW4 VOLUMEN_DE_PEDIDOS =======================================================================
 go
@@ -792,19 +826,28 @@ go
 create view MAND.CONVERSION_DE_PEDIDOS
 as
     select 
-        ISNULL(sum(h.cant_pedidos),0) as cantidad, 
+        ISNULL(
+            SUM(
+                CASE
+                    WHEN e.estado_pedido_codigo = h.dimension_estado_pedido THEN h.cant_pedidos
+                    ELSE 0
+                END
+            )
+        ,0) as cantidad, 
         e.estado_pedido_detalle as estado, 
         t.tiempo_año as anio, 
         t.tiempo_cuatrimestre as cuatrimestre, 
         s.sucursal_id as sucursal
-    from MAND.HECHOS_PEDIDOS as h
-        join MAND.DIMENSION_TIEMPO as t 
-        on t.tiempo_codigo = h.dimension_tiempo
-        join MAND.DIMENSION_SUCURSAL as s 
-        on s.sucursal_id = h.dimension_sucursal
-        join MAND.DIMENSION_ESTADO_PEDIDO as e 
-        on e.estado_pedido_codigo = h.dimension_estado_pedido
+FROM MAND.DIMENSION_ESTADO_PEDIDO AS e
+    CROSS JOIN MAND.HECHOS_PEDIDOS AS h 
+        --ON e.estado_pedido_codigo = h.dimension_estado_pedido
+    LEFT JOIN MAND.DIMENSION_TIEMPO AS t 
+        ON t.tiempo_codigo = h.dimension_tiempo
+    LEFT JOIN MAND.DIMENSION_SUCURSAL AS s 
+        ON s.sucursal_id = h.dimension_sucursal
     group by e.estado_pedido_detalle,t.tiempo_año,t.tiempo_cuatrimestre,s.sucursal_id
+GO
+
 --======================================================= VIEW6 TIEMPO PROMEDIO FABRICACIÓN =======================================================================
 
 GO
@@ -814,7 +857,7 @@ AS
         ds.sucursal_id AS [SUCURSAL],
         dt.tiempo_año AS [AÑO],
         dt.tiempo_cuatrimestre AS [CUATRIMESTRE],
-        AVG(hie.promedio_fabricacion) AS [TIEMPO PROMEDIO FABRICACION]
+        avg(hie.promedio_fabricacion) AS [TIEMPO PROMEDIO FABRICACION]
     FROM MAND.HECHOS_INGRESOS hie
         JOIN MAND.DIMENSION_TIEMPO dt
         ON hie.dimension_tiempo = dt.tiempo_codigo

@@ -1,1 +1,1 @@
-El tp esta en la carpeta Estrategia BI 
+El tp esta en la carpeta Entrega BI carpeta DATA
